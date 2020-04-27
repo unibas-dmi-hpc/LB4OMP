@@ -58,6 +58,10 @@ LB4OMP implements a profiling tool that collects such information. The profiling
 
 ``KMP_TIME_LOOPS`` defines the path where LB4OMP stores the collected execution time of all OpenMP parallel loops associated with the ``schedule(runtime)`` clause. When this environment variable is not defined, LB4OMP will not collect loops' execution time.
 
+``KMP_PRINT_CHUNKS`` when this environment variable is set to one, the LB4OMP collects and stores the calculated chunk size for each thread for each scheduling round. This information is stored in the same file as defined by ``KMP_TIME_LOOPS``. This data may be very large depending on the scheduling technique and the size of the OpenMP loop.
+
+
+
 =========================================================
 How to Build LB4OMP, the extended LLVM* OpenMP* Libraries
 =========================================================
