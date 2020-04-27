@@ -34,7 +34,7 @@ LB4OMP
 **LB4OMP contains the following tool:**
 
 | ``profiling``  
-The \textit{profiling} tool works similar to ``dynamic,1``, yet with timers that capture the average iteration execution time and its standard deviation for the target loops. The collected information is stored in a file, which is read later by the ``FSC``, ``FAC``, ``TAP``, and ``BOLD`` during execution. 
+The ``profiling`` tool works similar to ``dynamic,1``, yet with timers that capture the average iteration execution time and its standard deviation for the target loops. The collected information is stored in a file, which is read later by the ``FSC``, ``FAC``, ``TAP``, and ``BOLD`` during execution. 
    
 =================
 How to use LB4OMP
