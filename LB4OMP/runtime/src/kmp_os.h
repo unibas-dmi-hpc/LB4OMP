@@ -2,6 +2,10 @@
  * kmp_os.h -- KPTS runtime header file.
  */
 
+/*
+ * File modified by: Akan Yilmaz, Jonas H. Müller Korndörfer, Ahmed Eleliemy, Ali Mohammed, Florina M. Ciorba
+ */
+
 //===----------------------------------------------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
@@ -532,12 +536,12 @@ extern kmp_real64 __kmp_xchg_real64(volatile kmp_real64 *p, kmp_real64 v);
   __sync_fetch_and_sub((volatile kmp_int64 *)(p), 1LL)
 #define KMP_TEST_THEN_DEC_ACQ64(p)                                             \
   __sync_fetch_and_sub((volatile kmp_int64 *)(p), 1LL)
-//--------------------ay_extensions------------------------------------
+//--------------------LB4OMP_extensions------------------------------------
 #define KMP_TEST_THEN_SUB32(p, v)                                              \
   __sync_fetch_and_sub((volatile kmp_int32 *)(p), (kmp_int32)(v))
 #define KMP_TEST_THEN_SUB64(p, v)                                              \
   __sync_fetch_and_sub((volatile kmp_int64 *)(p), (kmp_int64)(v))
-//--------------------ay_extensions------------------------------------
+//--------------------LB4OMP_extensions------------------------------------
 #define KMP_TEST_THEN_ADD8(p, v)                                               \
   __sync_fetch_and_add((volatile kmp_int8 *)(p), (kmp_int8)(v))
 #define KMP_TEST_THEN_ADD32(p, v)                                              \

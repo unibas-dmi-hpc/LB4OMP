@@ -2,6 +2,10 @@
  * kmp_global.cpp -- KPTS global variables for runtime support library
  */
 
+/*
+ * File modified by: Akan Yilmaz, Jonas H. Müller Korndörfer, Ahmed Eleliemy, Ali Mohammed, Florina M. Ciorba
+ */
+
 //===----------------------------------------------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
@@ -223,7 +227,7 @@ enum sched_type __kmp_sch_map[kmp_sched_upper - kmp_sched_lower_ext +
     kmp_sch_guided_chunked, // ==> kmp_sched_guided            = 3
     kmp_sch_auto, // ==> kmp_sched_auto              = 4
     kmp_sch_trapezoidal, // ==> kmp_sched_trapezoidal       = 101
-    //--------------ay_extensions----------------
+    //--------------LB4OMP_extensions----------------
     kmp_sch_fsc, // ==> kmp_sched_fsc        = 103
     kmp_sch_tap, // ==> kmp_sch_tap          = 104
     kmp_sch_fac, // ==> kmp_sch_fac          = 105
@@ -239,7 +243,7 @@ enum sched_type __kmp_sch_map[kmp_sched_upper - kmp_sched_lower_ext +
     kmp_sch_af, // ==> kmp_sch_af          = 115
     kmp_sch_af_a, // ==> kmp_sch_af_a          = 116
     kmp_sch_profiling // ==> kmp_sch_profiling          = 117
-    //--------------ay_extensions----------------
+    //--------------LB4OMP_extensions----------------
     // will likely not be used, introduced here just to debug the code
     // of public intel extension schedules
 };
@@ -552,7 +556,7 @@ int _You_must_link_with_Microsoft_OpenMP_library = 1;
 kmp_target_offload_kind_t __kmp_target_offload = tgt_default;
 #endif
 
-//----------------------ay_extensions----------------------
+//----------------------LB4OMP_extensions----------------------
 /* For additional dynamic scheduling techniques */
 int __kmp_env_min = 0; /* minimum chunk size (default = 0/off) */
 int __kmp_env_mu = 1600; /* mean value of iteration times [micro s] */
@@ -562,5 +566,5 @@ int __kmp_env_cpu_speed = 2400; /* cpu frequency [MHz] */
 double __kmp_env_alpha = 1.0; /* scaling factor for TAP (empirically) */
 int __kmp_env_divider = 10; /* AF sub-chunk divider (default = 10) */
 std::vector<double> __kmp_env_weights = {1.0}; /* Weights of PUs */
-//----------------------ay_extensions----------------------
+//----------------------LB4OMP_extensions----------------------
 // end of file //

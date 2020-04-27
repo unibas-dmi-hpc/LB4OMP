@@ -2,6 +2,10 @@
  * kmp_dispatch.cpp: dynamic scheduling - iteration initialization and dispatch.
  */
 
+/*
+ * File modified by: Akan Yilmaz, Jonas H. Müller Korndörfer, Ahmed Eleliemy, Ali Mohammed, Florina M. Ciorba
+ */
+
 //===----------------------------------------------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
@@ -41,13 +45,13 @@
 #include "ompt-specific.h"
 #endif
 
-/* ----------------------------ay_extensions------------------------------- */
+/* ----------------------------LB4OMP_extensions------------------------------- */
 #include <math.h>
 #include <shared_mutex>
 #include <deque> // container for mutexes
 
 std::deque<std::shared_timed_mutex> mutexes;
-/* ----------------------------ay_extensions------------------------------- */
+/* ----------------------------LB4OMP_extensions------------------------------- */
 
 /* ------------------------------------------------------------------------ */
 /* ------------------------------------------------------------------------ */
@@ -271,9 +275,9 @@ void __kmp_dispatch_dxo_error(int *gtid_ref, int *cid_ref, ident_t *loc_ref) {
 template <typename T>
 void __kmp_dispatch_init_algorithm(ident_t *loc, int gtid,
                                    dispatch_private_info_template<T> *pr,
-                                   //-----ay_extensions------
+                                   //-----LB4OMP_extensions------
                                    dispatch_shared_info_template<T> *sh,
-                                   //-----ay_extensions------
+                                   //-----LB4OMP_extensions------
                                    enum sched_type schedule, T lb, T ub,
                                    typename traits_t<T>::signed_t st,
 #if USE_ITT_BUILD
@@ -286,7 +290,7 @@ void __kmp_dispatch_init_algorithm(ident_t *loc, int gtid,
 
   int active;
   T tc;
-  //------------------------ay_extensions------------------------
+  //------------------------LB4OMP_extensions------------------------
   // initialize the min chunk switcher
   T min_chunk = chunk;
   T chunk_spec;
@@ -298,7 +302,7 @@ void __kmp_dispatch_init_algorithm(ident_t *loc, int gtid,
   }
   pr->u.p.min_chunk = min_chunk;
   pr->u.p.chunk_spec = chunk_spec;
-  //------------------------ay_extensions------------------------
+  //------------------------LB4OMP_extensions------------------------
   kmp_info_t *th;
   kmp_team_t *team;
 // timeUpdates = 0;
@@ -874,7 +878,7 @@ LOOP_TIME_MEASURE_START
     pr->u.p.parm4 = parm4;
   } // case
   break;
-    /* --------------------------ay_extensions----------------------------- */
+    /* --------------------------LB4OMP_extensions----------------------------- */
   case kmp_sch_fsc: {
 	if (tid == 0 && means_sigmas.find(loc->psource)==means_sigmas.end()){
 		read_profiling_data(loc->psource);
@@ -1597,7 +1601,7 @@ LOOP_TIME_MEASURE_START
     }
   } // case
   break;
-    /* --------------------------ay_extensions-----------------------------*/
+    /* --------------------------LB4OMP_extensions-----------------------------*/
 
   default: {
     __kmp_fatal(KMP_MSG(UnknownSchedTypeDetected), // Primary message
@@ -1608,12 +1612,12 @@ LOOP_TIME_MEASURE_START
   } // switch
   pr->schedule = schedule;
 
-  /* --------------------------ay_extensions-----------------------------*/
+  /* --------------------------LB4OMP_extensions-----------------------------*/
 #if KMP_DEBUG
   /* Debug prints for correctness checks, comment out else */
   pr->u.p.chunks.clear();
 #endif
-  /* --------------------------ay_extensions-----------------------------*/
+  /* --------------------------LB4OMP_extensions-----------------------------*/
 }
 
 #if KMP_USE_HIER_SCHED
@@ -1683,7 +1687,7 @@ __kmp_dispatch_init(ident_t *loc, int gtid, enum sched_type schedule, T lb,
   kmp_team_t *team;
   kmp_uint32 my_buffer_index;
   dispatch_private_info_template<T> *pr;
-  dispatch_shared_info_template<T> /*ay_extensions volatile*/ *sh;
+  dispatch_shared_info_template<T> /*LB4OMP_extensions volatile*/ *sh;
 
   KMP_BUILD_ASSERT(sizeof(dispatch_private_info_template<T>) ==
                    sizeof(dispatch_private_info));
@@ -1779,16 +1783,16 @@ __kmp_dispatch_init(ident_t *loc, int gtid, enum sched_type schedule, T lb,
         &th->th.th_dispatch
              ->th_disp_buffer[my_buffer_index % __kmp_dispatch_num_buffers]);
     sh = reinterpret_cast<
-        dispatch_shared_info_template<T> /*ay_extensions volatile*/ *>(
+        dispatch_shared_info_template<T> /*LB4OMP_extensions volatile*/ *>(
         &team->t.t_disp_buffer[my_buffer_index % __kmp_dispatch_num_buffers]);
     KD_TRACE(10, ("__kmp_dispatch_init: T#%d my_buffer_index:%d\n", gtid,
                   my_buffer_index));
   }
 
   __kmp_dispatch_init_algorithm(loc, gtid, pr,
-                                //------------ay_extensions----------------
+                                //------------LB4OMP_extensions----------------
                                 sh,
-                                //------------ay_extensions----------------
+                                //------------LB4OMP_extensions----------------
                                 schedule, lb, ub, st,
 #if USE_ITT_BUILD
                                 &cur_chunk,
@@ -1824,7 +1828,7 @@ __kmp_dispatch_init(ident_t *loc, int gtid, enum sched_type schedule, T lb,
     th->th.th_dispatch->th_dispatch_pr_current = (dispatch_private_info_t *)pr;
     th->th.th_dispatch->th_dispatch_sh_current =
         CCAST(dispatch_shared_info_t *,
-              (/* ay_extensions volatile*/ dispatch_shared_info_t *)sh);
+              (/* LB4OMP_extensions volatile*/ dispatch_shared_info_t *)sh);
 #if USE_ITT_BUILD
     if (pr->flags.ordered) {
       __kmp_itt_ordered_init(gtid);
@@ -1929,9 +1933,9 @@ static void __kmp_dispatch_finish(int gtid, ident_t *loc) {
     dispatch_private_info_template<UT> *pr =
         reinterpret_cast<dispatch_private_info_template<UT> *>(
             th->th.th_dispatch->th_dispatch_pr_current);
-    dispatch_shared_info_template<UT> /*ay_extensions volatile*/ *sh =
+    dispatch_shared_info_template<UT> /*LB4OMP_extensions volatile*/ *sh =
         reinterpret_cast<
-            dispatch_shared_info_template<UT> /*ay_extensions volatile*/ *>(
+            dispatch_shared_info_template<UT> /*LB4OMP_extensions volatile*/ *>(
             th->th.th_dispatch->th_dispatch_sh_current);
     KMP_DEBUG_ASSERT(pr);
     KMP_DEBUG_ASSERT(sh);
@@ -1993,9 +1997,9 @@ static void __kmp_dispatch_finish_chunk(int gtid, ident_t *loc) {
     dispatch_private_info_template<UT> *pr =
         reinterpret_cast<dispatch_private_info_template<UT> *>(
             th->th.th_dispatch->th_dispatch_pr_current);
-    dispatch_shared_info_template<UT> /* ay_extensions volatile*/ *sh =
+    dispatch_shared_info_template<UT> /* LB4OMP_extensions volatile*/ *sh =
         reinterpret_cast<
-            dispatch_shared_info_template<UT> /*ay_extensions volatile*/ *>(
+            dispatch_shared_info_template<UT> /*LB4OMP_extensions volatile*/ *>(
             th->th.th_dispatch->th_dispatch_sh_current);
     KMP_DEBUG_ASSERT(pr);
     KMP_DEBUG_ASSERT(sh);
@@ -2065,7 +2069,7 @@ static void __kmp_dispatch_finish_chunk(int gtid, ident_t *loc) {
 template <typename T>
 int __kmp_dispatch_next_algorithm(
     int gtid, dispatch_private_info_template<T> *pr,
-    dispatch_shared_info_template<T> /* ay_extensions volatile*/ *sh,
+    dispatch_shared_info_template<T> /* LB4OMP_extensions volatile*/ *sh,
     kmp_int32 *p_last, T *p_lb, T *p_ub, typename traits_t<T>::signed_t *p_st,
     T nproc, T tid) 
 {
@@ -2107,7 +2111,7 @@ int __kmp_dispatch_next_algorithm(
     return 0;
   }
 
-  //--------------------------ay_extensions---------------------------
+  //--------------------------LB4OMP_extensions---------------------------
   // Check if user has set min chunk size and switch to dynamic
   // if the specified size is reached. Use only with advanced schedules.
 //   if (pr->u.p.chunk_spec > 0 &&
@@ -2172,7 +2176,7 @@ int __kmp_dispatch_next_algorithm(
 //     } // if
 //     //---------------------min chunk switcher-------------------------
 //   }
-  //--------------------------ay_extensions---------------------------
+  //--------------------------LB4OMP_extensions---------------------------
 
   switch (pr->schedule) {
 #if (KMP_STATIC_STEAL_ENABLED)
@@ -2803,7 +2807,7 @@ int __kmp_dispatch_next_algorithm(
     
   } // case
   break;
-/* --------------------------ay_extensions----------------------------- */
+/* --------------------------LB4OMP_extensions----------------------------- */
   case kmp_sch_fsc: {
     T chunk = pr->u.p.parm1; // the chunk size
 
@@ -4498,7 +4502,7 @@ if((int)tid == 0){
     // }
   } // case
   break;
-    /* --------------------------ay_extensions-----------------------------*/
+    /* --------------------------LB4OMP_extensions-----------------------------*/
   default: {
     status = 0; // to avoid complaints on uninitialized variable use
     __kmp_fatal(KMP_MSG(UnknownSchedTypeDetected), // Primary message
@@ -4532,12 +4536,12 @@ if((int)tid == 0){
     __kmp_str_free(&buff);
   }
 #endif
-  /* --------------------------ay_extensions-----------------------------*/
+  /* --------------------------LB4OMP_extensions-----------------------------*/
 #if KMP_DEBUG
   /* Debug prints for correctness checks. Comment out else. */
   print_chunks(status, p_lb, p_ub, tid, pr);
 #endif
-  /* --------------------------ay_extensions-----------------------------*/
+  /* --------------------------LB4OMP_extensions-----------------------------*/
   if(status == 0){
     LOOP_TIME_MEASURE_END
   }else{
@@ -4741,7 +4745,7 @@ static int __kmp_dispatch_next(ident_t *loc, int gtid, kmp_int32 *p_last,
     return status;
   } else {
     kmp_int32 last = 0;
-    dispatch_shared_info_template<T> /*ay_extensions volatile*/ *sh;
+    dispatch_shared_info_template<T> /*LB4OMP_extensions volatile*/ *sh;
 
     KMP_DEBUG_ASSERT(th->th.th_dispatch ==
                      &th->th.th_team->t.t_dispatch[th->th.th_info.ds.ds_tid]);
@@ -4750,7 +4754,7 @@ static int __kmp_dispatch_next(ident_t *loc, int gtid, kmp_int32 *p_last,
         th->th.th_dispatch->th_dispatch_pr_current);
     KMP_DEBUG_ASSERT(pr);
     sh = reinterpret_cast<
-        dispatch_shared_info_template<T> /* ay_extensions volatile*/ *>(
+        dispatch_shared_info_template<T> /* LB4OMP_extensions volatile*/ *>(
         th->th.th_dispatch->th_dispatch_sh_current);
     KMP_DEBUG_ASSERT(sh);
 
@@ -4804,7 +4808,7 @@ static int __kmp_dispatch_next(ident_t *loc, int gtid, kmp_int32 *p_last,
 
         sh->u.s.num_done = 0;
         sh->u.s.iteration = 0;
-        //-------------------ay_extensions---------------------
+        //-------------------LB4OMP_extensions---------------------
         sh->u.s.chunk_size = 1;
         sh->u.s.batch = 0;
         sh->u.s.counter = 0;
@@ -4814,7 +4818,7 @@ static int __kmp_dispatch_next(ident_t *loc, int gtid, kmp_int32 *p_last,
         sh->u.s.bold_time = 0;
         sh->u.s.initialized = false;
         //sh->u.s.dbl_vector.clear(); // looks like not needed
-        //-------------------ay_extensions---------------------
+        //-------------------LB4OMP_extensions---------------------
 
         /* TODO replace with general release procedure? */
         if (pr->flags.ordered) {

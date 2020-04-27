@@ -2,6 +2,10 @@
  * kmp_dispatch.h: dynamic scheduling - iteration initialization and dispatch.
  */
 
+/*
+ * File modified by: Akan Yilmaz, Jonas H. Müller Korndörfer, Ahmed Eleliemy, Ali Mohammed, Florina M. Ciorba
+ */
+
 //===----------------------------------------------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
@@ -32,11 +36,11 @@
 #include "ompt-specific.h"
 #endif
 
-/* ----------------------------ay_extensions------------------------------- */
+/* ----------------------------LB4OMP_extensions------------------------------- */
 //#include <chrono> // for time measurements like in BOLD
 #include <sstream> // for debug only [need to link app with C++ std library]
 #include <x86intrin.h> // for time measurements with __rdtscp()
-/* ----------------------------ay_extensions------------------------------- */
+/* ----------------------------LB4OMP_extensions------------------------------- */
 
 /* ------------------------------------------------------------------------ */
 /* ------------------------------------------------------------------------ */
@@ -52,9 +56,9 @@ template <typename T> struct dispatch_private_info_template;
 template <typename T>
 extern void __kmp_dispatch_init_algorithm(
     ident_t *loc, int gtid, dispatch_private_info_template<T> *pr,
-    //----------------------ay_extensions--------------------
+    //----------------------LB4OMP_extensions--------------------
     dispatch_shared_info_template<T> *sh,
-    //----------------------ay_extensions--------------------
+    //----------------------LB4OMP_extensions--------------------
     enum sched_type schedule, T lb, T ub, typename traits_t<T>::signed_t st,
 #if USE_ITT_BUILD
     kmp_uint64 *cur_chunk,
@@ -63,7 +67,7 @@ extern void __kmp_dispatch_init_algorithm(
 template <typename T>
 extern int __kmp_dispatch_next_algorithm(
     int gtid, dispatch_private_info_template<T> *pr,
-    dispatch_shared_info_template<T> /*ay_extensions volatile*/ *sh,
+    dispatch_shared_info_template<T> /*LB4OMP_extensions volatile*/ *sh,
     kmp_int32 *p_last, T *p_lb, T *p_ub, typename traits_t<T>::signed_t *p_st,
     T nproc, T unit_id);
 
@@ -77,9 +81,9 @@ void __kmp_dispatch_deo_error(int *gtid_ref, int *cid_ref, ident_t *loc_ref);
 template <typename T> struct dispatch_private_infoXX_template {
   typedef typename traits_t<T>::unsigned_t UT;
   typedef typename traits_t<T>::signed_t ST;
-  //-----------------ay_extensions------------
+  //-----------------LB4OMP_extensions------------
   typedef typename traits_t<T>::floating_t DBL;
-  //-----------------ay_extensions------------
+  //-----------------LB4OMP_extensions------------
   UT count; // unsigned
   T ub;
   /* Adding KMP_ALIGN_CACHE here doesn't help / can hurt performance */
@@ -88,7 +92,7 @@ template <typename T> struct dispatch_private_infoXX_template {
   UT tc; // unsigned
   T static_steal_counter; // for static_steal only; maybe better to put after ub
 
-  //-----------------ay_extensions------------
+  //-----------------LB4OMP_extensions------------
 
   struct KMP_ALIGN(16) {
     kmp_int32 min_chunk; // minimum chunk size
@@ -96,7 +100,7 @@ template <typename T> struct dispatch_private_infoXX_template {
     kmp_int64 l_parm1;
   };
 
-  //-----------------ay_extensions------------
+  //-----------------LB4OMP_extensions------------
 
   /* parm[1-4] are used in different ways by different scheduling algorithms */
 
@@ -113,7 +117,7 @@ template <typename T> struct dispatch_private_infoXX_template {
     T parm4;
   };
 
-  //-----------------ay_extensions------------
+  //-----------------LB4OMP_extensions------------
   struct KMP_ALIGN(32) {
     DBL dbl_parm1;
     DBL dbl_parm2;
@@ -129,7 +133,7 @@ template <typename T> struct dispatch_private_infoXX_template {
     /* For debug chunk prints only */
 #endif
   };
-  //-----------------ay_extensions------------
+  //-----------------LB4OMP_extensions------------
 
   UT ordered_lower; // unsigned
   UT ordered_upper; // unsigned
@@ -193,10 +197,10 @@ template <typename T> struct KMP_ALIGN_CACHE dispatch_private_info_template {
 // dispatch_shared_info{32,64}_t types
 template <typename T> struct dispatch_shared_infoXX_template {
   typedef typename traits_t<T>::unsigned_t UT;
-  //---------------------ay_extensions------------------------
+  //---------------------LB4OMP_extensions------------------------
   typedef typename traits_t<T>::signed_t ST;
   typedef typename traits_t<T>::floating_t DBL;
-  //---------------------ay_extensions------------------------
+  //---------------------LB4OMP_extensions------------------------
   /* chunk index under dynamic, number of idle threads under static-steal;
      iteration index otherwise */
   volatile UT iteration;
@@ -205,7 +209,7 @@ template <typename T> struct dispatch_shared_infoXX_template {
   // to retain the structure size making ordered_iteration scalar
   UT ordered_dummy[KMP_MAX_ORDERED - 3];
 
-  //---------------------ay_extensions------------------------
+  //---------------------LB4OMP_extensions------------------------
   /* Mutex for protecting shared variables */
   std::mutex mtx;
   /* Start indicator for resetting in init */
@@ -230,7 +234,7 @@ template <typename T> struct dispatch_shared_infoXX_template {
   std::vector<DBL> dbl_vector;
   std::vector<DBL> dbl_vector2;
   /*************AWF/AF*************/
-  //---------------------ay_extensions------------------------
+  //---------------------LB4OMP_extensions------------------------
 };
 
 // replaces dispatch_shared_info structure and dispatch_shared_info_t type
@@ -282,7 +286,7 @@ __forceinline kmp_int64 test_then_add<kmp_int64>(volatile kmp_int64 *p,
   return r;
 }
 
-//-------------------------------ay_extensions-----------------------------
+//-------------------------------LB4OMP_extensions-----------------------------
 // test_then_add template (general template should NOT be used)
 template <typename T> static __forceinline T test_then_sub(volatile T *p, T d);
 
@@ -301,7 +305,7 @@ __forceinline kmp_int64 test_then_sub<kmp_int64>(volatile kmp_int64 *p,
   r = KMP_TEST_THEN_SUB64(p, d);
   return r;
 }
-//-------------------------------ay_extensions-----------------------------
+//-------------------------------LB4OMP_extensions-----------------------------
 
 // test_then_inc_acq template (general template should NOT be used)
 template <typename T> static __forceinline T test_then_inc_acq(volatile T *p);
@@ -566,7 +570,7 @@ static __forceinline long double __kmp_pow(long double x, UT y) {
   return s;
 }
 
-//-----------------------ay_extensions------------------------
+//-----------------------LB4OMP_extensions------------------------
 // Get time stamp in microseconds.
 /* static __forceinline kmp_int64 __kmp_get_micros() {
   kmp_int64 us =
@@ -625,7 +629,7 @@ static void print_chunks(int status, T *p_lb, T *p_ub, T tid,
   }
 }
 #endif
-//-----------------------ay_extensions------------------------
+//-----------------------LB4OMP_extensions------------------------
 
 /* Computes and returns the number of unassigned iterations after idx chunks
    have been assigned

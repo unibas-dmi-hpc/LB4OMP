@@ -3,6 +3,10 @@
  * kmp.h -- KPTS runtime header file.
  */
 
+/*
+ * File modified by: Akan Yilmaz, Jonas H. Müller Korndörfer, Ahmed Eleliemy, Ali Mohammed, Florina M. Ciorba
+ */
+
 //===----------------------------------------------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
@@ -79,10 +83,10 @@
 
 #include "kmp_safe_c_api.h"
 
-//-----------------------------------ay_extensions-------------------------
+//-----------------------------------LB4OMP_extensions-------------------------
 #include <mutex> // for FAC, AWF and AF
 #include <vector>
-//-----------------------------------ay_extensions-------------------------
+//-----------------------------------LB4OMP_extensions-------------------------
 
 #if KMP_STATS_ENABLED
 class kmp_stats_list;
@@ -330,7 +334,7 @@ typedef enum kmp_sched {
 #if KMP_STATIC_STEAL_ENABLED
   kmp_sched_static_steal = 102, // mapped to kmp_sch_static_steal (44)
 #endif
-  //--------------ay_extensions----------------
+  //--------------LB4OMP_extensions----------------
   kmp_sched_fsc = 103, // mapped to kmp_sch_fsc (48)
   kmp_sched_tap = 104, // mapped to kmp_sch_tap (49)
   kmp_sched_fac = 105, // mapped to kmp_sch_fac (50)
@@ -346,7 +350,7 @@ typedef enum kmp_sched {
   kmp_sched_af = 115, // mapped to kmp_sch_af (60)
   kmp_sched_af_a = 116, // mapped to kmp_sch_af_a (61)
   kmp_sched_profiling = 117, // mapped to kmp_sch_profiling (62)
-  //--------------ay_extensions----------------
+  //--------------LB4OMP_extensions----------------
   kmp_sched_upper,
   kmp_sched_default = kmp_sched_static // default scheduling
 } kmp_sched_t;
@@ -382,7 +386,7 @@ enum sched_type : kmp_int32 {
   kmp_sch_runtime_simd = 47, /**< runtime with chunk adjustment */
 #endif
 
-  //--------------ay_extensions----------------
+  //--------------LB4OMP_extensions----------------
   kmp_sch_fsc = 48,
   kmp_sch_tap = 49,
   kmp_sch_fac = 50,
@@ -398,7 +402,7 @@ enum sched_type : kmp_int32 {
   kmp_sch_af = 60,
   kmp_sch_af_a = 61,
   kmp_sch_profiling = 62,
-  //--------------ay_extensions----------------
+  //--------------LB4OMP_extensions----------------
 
   /* accessible only through KMP_SCHEDULE environment variable */
   kmp_sch_upper, /**< upper bound for unordered values */
@@ -1615,14 +1619,14 @@ typedef struct KMP_ALIGN_CACHE dispatch_private_info32 {
   kmp_int32 static_steal_counter; /* for static_steal only; maybe better to put
                                      after ub */
 
-  //-----------------ay_extensions---------------
+  //-----------------LB4OMP_extensions---------------
   struct KMP_ALIGN(16) {
     kmp_int32 min_chunk; // minimum chunk size
     kmp_int32 chunk_spec; // minimum remaining
     /* Used for things like timestamps */
     kmp_int64 l_parm1;
   };
-  //-----------------ay_extensions---------------
+  //-----------------LB4OMP_extensions---------------
 
   // KMP_ALIGN( 16 ) ensures ( if the KMP_ALIGN macro is turned on )
   //    a) parm3 is properly aligned and
@@ -1637,7 +1641,7 @@ typedef struct KMP_ALIGN_CACHE dispatch_private_info32 {
     kmp_int32 parm4;
   };
 
-  //-----------------ay_extensions---------------
+  //-----------------LB4OMP_extensions---------------
   /* To use for float parameters. Aligned. */
   struct KMP_ALIGN(32) {
     kmp_real32 flt_parm1;
@@ -1652,7 +1656,7 @@ typedef struct KMP_ALIGN_CACHE dispatch_private_info32 {
     std::vector<kmp_int32> chunks;
     /* For debug chunk prints only */
   };
-  //-----------------ay_extensions---------------
+  //-----------------LB4OMP_extensions---------------
 
   kmp_uint32 ordered_lower;
   kmp_uint32 ordered_upper;
@@ -1674,14 +1678,14 @@ typedef struct KMP_ALIGN_CACHE dispatch_private_info64 {
   kmp_int64 static_steal_counter; /* for static_steal only; maybe better to put
                                      after ub */
 
-  //-----------------ay_extensions---------------
+  //-----------------LB4OMP_extensions---------------
   struct KMP_ALIGN(16) {
     kmp_int32 min_chunk; // minimum chunk size
     kmp_int32 chunk_spec; // minimum remaining
     /* Used for things like timestamps */
     kmp_int64 l_parm1;
   };
-  //-----------------ay_extensions---------------
+  //-----------------LB4OMP_extensions---------------
 
   /* parm[1-4] are used in different ways by different scheduling algorithms */
 
@@ -1698,7 +1702,7 @@ typedef struct KMP_ALIGN_CACHE dispatch_private_info64 {
     kmp_int64 parm4;
   };
 
-  //-----------------ay_extensions---------------
+  //-----------------LB4OMP_extensions---------------
   /* To use for double parameters. Aligned. */
   struct KMP_ALIGN(64) {
     kmp_real64 dbl_parm1;
@@ -1715,7 +1719,7 @@ typedef struct KMP_ALIGN_CACHE dispatch_private_info64 {
 #endif
     /* For debug chunk prints only */
   };
-  //-----------------ay_extensions---------------
+  //-----------------LB4OMP_extensions---------------
 
   kmp_uint64 ordered_lower;
   kmp_uint64 ordered_upper;
@@ -1797,7 +1801,7 @@ typedef struct dispatch_shared_info32 {
   volatile kmp_uint32 ordered_iteration;
   // Dummy to retain the structure size after making ordered_iteration scalar
   kmp_int32 ordered_dummy[KMP_MAX_ORDERED - 1];
-  //---------------------ay_extensions------------------------
+  //---------------------LB4OMP_extensions------------------------
   /* Mutex for protecting shared variables */
   std::mutex mtx;
   /* Start indicator for resetting in init */
@@ -1822,7 +1826,7 @@ typedef struct dispatch_shared_info32 {
   std::vector<kmp_real32> dbl_vector;
   std::vector<kmp_real32> dbl_vector2;
   /*************AWF/AF****************/
-  //---------------------ay_extensions------------------------
+  //---------------------LB4OMP_extensions------------------------
 } dispatch_shared_info32_t;
 
 typedef struct dispatch_shared_info64 {
@@ -1833,7 +1837,7 @@ typedef struct dispatch_shared_info64 {
   volatile kmp_uint64 ordered_iteration;
   // Dummy to retain the structure size after making ordered_iteration scalar
   kmp_int64 ordered_dummy[KMP_MAX_ORDERED - 3];
-  //---------------------ay_extensions------------------------
+  //---------------------LB4OMP_extensions------------------------
   /* Mutex for protecting shared variables */
   std::mutex mtx;
   /* Start indicator for resetting in init */
@@ -1858,7 +1862,7 @@ typedef struct dispatch_shared_info64 {
   std::vector<kmp_real64> dbl_vector;
   std::vector<kmp_real64> dbl_vector2;
   /*************AWF/AF****************/
-  //---------------------ay_extensions------------------------
+  //---------------------LB4OMP_extensions------------------------
 } dispatch_shared_info64_t;
 
 typedef struct dispatch_shared_info {
@@ -3080,7 +3084,7 @@ extern enum sched_type __kmp_guided; /* default guided scheduling method */
 extern enum sched_type __kmp_auto; /* default auto scheduling method */
 extern int __kmp_chunk; /* default runtime chunk size */
 
-//------------------ay_extensions----------------------
+//------------------LB4OMP_extensions----------------------
 extern int __kmp_env_min; /* minimum chunk size (default = 0/off) */
 extern int __kmp_env_mu; /* mean value of iteration times [micro s] */
 extern double __kmp_env_sigma; /* sd of iteration times [micro s] */
@@ -3089,7 +3093,7 @@ extern int __kmp_env_cpu_speed; /* cpu frequency [MHz] */
 extern double __kmp_env_alpha; /* scaling factor for TAP (empirically) */
 extern int __kmp_env_divider; /* AF sub-chunk divider (default = 10) */
 extern std::vector<double> __kmp_env_weights; /* Weights of PUs */
-//------------------ay_extensions----------------------
+//------------------LB4OMP_extensions----------------------
 
 extern size_t __kmp_stksize; /* stack size per thread         */
 #if KMP_USE_MONITOR

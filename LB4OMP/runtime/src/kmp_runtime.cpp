@@ -2,6 +2,10 @@
  * kmp_runtime.cpp -- KPTS runtime support library
  */
 
+/*
+ * File modified by: Akan Yilmaz, Jonas H. Müller Korndörfer, Ahmed Eleliemy, Ali Mohammed, Florina M. Ciorba
+ */
+
 //===----------------------------------------------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
@@ -2878,7 +2882,7 @@ void __kmp_get_schedule(int gtid, kmp_sched_t *kind, int *chunk) {
   case kmp_sch_trapezoidal:
     *kind = kmp_sched_trapezoidal;
     break;
-    //----------------ay_extensions-------------------
+    //----------------LB4OMP_extensions-------------------
   case kmp_sch_fsc:
     *kind = kmp_sched_fsc;
     break;
@@ -2924,7 +2928,7 @@ void __kmp_get_schedule(int gtid, kmp_sched_t *kind, int *chunk) {
   case kmp_sch_profiling:
     *kind = kmp_sched_profiling;
     break;
-    //----------------ay_extensions-------------------
+    //----------------LB4OMP_extensions-------------------
 #if KMP_STATIC_STEAL_ENABLED
   case kmp_sch_static_steal:
     *kind = kmp_sched_static_steal;

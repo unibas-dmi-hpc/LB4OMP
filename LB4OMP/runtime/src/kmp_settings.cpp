@@ -2,6 +2,10 @@
  * kmp_settings.cpp -- Initialize environment variables
  */
 
+/*
+ * File modified by: Akan Yilmaz, Jonas H. Müller Korndörfer, Ahmed Eleliemy, Ali Mohammed, Florina M. Ciorba
+ */
+
 //===----------------------------------------------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
@@ -26,11 +30,11 @@
 #include "kmp_str.h"
 #include "kmp_wrapper_getpid.h"
 #include <ctype.h> // toupper()
-//--------------------ay_extensions-------------------------------
+//--------------------LB4OMP_extensions-------------------------------
 /* Includes for WEIGHTS env variable */
 #include <string>
 #include <sstream> // for printing only
-//--------------------ay_extensions-------------------------------
+//--------------------LB4OMP_extensions-------------------------------
 
 static int __kmp_env_toPrint(char const *name, int flag);
 
@@ -66,7 +70,7 @@ static unsigned int __kmp_readstr_with_sentinel(char *dest, char const *src,
 }
 #endif
 
-//--------------------ay_extensions-------------------------------
+//--------------------LB4OMP_extensions-------------------------------
 /* Convert a string containing numbers to double vector */
 
 /// __kmp_convert_to_double_vector - Splits a text by a delimeter, converts the
@@ -90,7 +94,7 @@ __kmp_convert_to_double_vector(char const *phrase,
   return list;
 }
 
-//--------------------ay_extensions-------------------------------
+//--------------------LB4OMP_extensions-------------------------------
 
 static int __kmp_match_with_sentinel(char const *a, char const *b, size_t len,
                                      char sentinel) {
@@ -3696,7 +3700,7 @@ static const char *__kmp_parse_single_omp_schedule(const char *name,
     sched = kmp_sch_trapezoidal;
   else if (!__kmp_strcasecmp_with_sentinel("static", ptr, *delim)) /* STATIC */
     sched = kmp_sch_static;
-  //--------------------ay_extensions--------------------------
+  //--------------------LB4OMP_extensions--------------------------
   else if (!__kmp_strcasecmp_with_sentinel("fsc", ptr, *delim)) /* FSC */
     sched = kmp_sch_fsc;
   else if (!__kmp_strcasecmp_with_sentinel("tap", ptr, *delim)) /* TAP */
@@ -3727,7 +3731,7 @@ static const char *__kmp_parse_single_omp_schedule(const char *name,
     sched = kmp_sch_af_a;
   else if (!__kmp_strcasecmp_with_sentinel("profiling", ptr, *delim)) /* P */
     sched = kmp_sch_profiling;
-    //--------------------ay_extensions--------------------------
+    //--------------------LB4OMP_extensions--------------------------
 #if KMP_STATIC_STEAL_ENABLED
   else if (!__kmp_strcasecmp_with_sentinel("static_steal", ptr, *delim))
     sched = kmp_sch_static_steal;
@@ -3832,7 +3836,7 @@ static void __kmp_stg_print_omp_schedule(kmp_str_buf_t *buffer,
     case kmp_sch_trapezoidal:
       __kmp_str_buf_print(buffer, "%s,%d'\n", "trapezoidal", __kmp_chunk);
       break;
-      //---------------ay_extensions----------------------
+      //---------------LB4OMP_extensions----------------------
     case kmp_sch_fsc:
       __kmp_str_buf_print(buffer, "%s,%d'\n", "fsc", __kmp_chunk);
       break;
@@ -3878,7 +3882,7 @@ static void __kmp_stg_print_omp_schedule(kmp_str_buf_t *buffer,
     case kmp_sch_profiling:
       __kmp_str_buf_print(buffer, "%s,%d'\n", "profiling", __kmp_chunk);
       break;
-      //---------------ay_extensions----------------------
+      //---------------LB4OMP_extensions----------------------
     case kmp_sch_static:
     case kmp_sch_static_chunked:
     case kmp_sch_static_balanced:
@@ -4828,7 +4832,7 @@ static void __kmp_stg_print_omp_tool_libraries(kmp_str_buf_t *buffer,
   }
 } // __kmp_stg_print_omp_tool_libraries
 
-//-------------------------ay_extensions----------------------------
+//-------------------------LB4OMP_extensions----------------------------
 
 static void __kmp_stg_parse_env_min(char const *name, char const *value,
                                    void *data) {
@@ -4932,7 +4936,7 @@ static void __kmp_stg_print_env_weights(kmp_str_buf_t *buffer, char const *name,
   __kmp_str_buf_print(buffer, "   %s\n", name, ss.str().c_str());
 } // __kmp_stg_print_env_weights
 
-//-------------------------ay_extensions----------------------------
+//-------------------------LB4OMP_extensions----------------------------
 
 #endif
 
@@ -5204,7 +5208,7 @@ static kmp_setting_t __kmp_stg_table[] = {
      __kmp_stg_print_omp_tool_libraries, NULL, 0, 0},
 #endif
 
-    //------------------ay_extensions------------------
+    //------------------LB4OMP_extensions------------------
     {"KMP_MIN", __kmp_stg_parse_env_min, __kmp_stg_print_env_min, NULL, 0, 0},
     {"KMP_MU", __kmp_stg_parse_env_mu, __kmp_stg_print_env_mu, NULL, 0, 0},
     {"KMP_SIGMA", __kmp_stg_parse_env_sigma, __kmp_stg_print_env_sigma, NULL, 0,
@@ -5219,7 +5223,7 @@ static kmp_setting_t __kmp_stg_table[] = {
      NULL, 0, 0},
     {"KMP_WEIGHTS", __kmp_stg_parse_env_weights, __kmp_stg_print_env_weights,
      NULL, 0, 0},
-    //------------------ay_extensions------------------
+    //------------------LB4OMP_extensions------------------
 
     {"", NULL, NULL, NULL, 0, 0}}; // settings
 
