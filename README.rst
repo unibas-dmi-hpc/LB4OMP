@@ -56,7 +56,7 @@ LB4OMP implements a profiling tool that collects such information. The profiling
 
 ``KMP_MIN`` declares the chunk size parameter for the newly implemented scheduling techniques use.
 
-
+``KMP_TIME_LOOPS`` defines the path where LB4OMP stores the collected execution time of all OpenMP parallel loops associated with the ``schedule(runtime)`` clause. When this environment variable is not defined, LB4OMP will not collect loops' execution time.
 
 =========================================================
 How to Build LB4OMP, the extended LLVM* OpenMP* Libraries
