@@ -5,10 +5,10 @@ LB4OMP
 
 **LB4OMP contains the following loop scheduling techniques:**
 
-OpenMP standard
+**OpenMP standard**
 
 | ``static``  
-| ``dynamic``    
+| ``dynamic``  
 ``guided``
 
 **Dynamic** and **non-adaptive** loop scheduling techniques **OpenMP non-standard**
@@ -18,9 +18,9 @@ OpenMP standard
 **Dynamic** and **non-adaptive** loop scheduling techniques **newly implemented in LB4OMP**
 
 | ``Fixed size chunk (FSC)``  
-| ``Factoring (FAC)``
-| ``Improved implementation of Factoring (mFAC)``
-| ``Practical variant of factoring (FAC2)`` 
+| ``Factoring (FAC)``  
+| ``Improved implementation of Factoring (mFAC)``  
+| ``Practical variant of factoring (FAC2)``  
 | ``Tapering (TAP)``  
 ``Practical variant of weighted factoring (WF2)``
 
@@ -28,9 +28,14 @@ OpenMP standard
 
 | ``BOLD``  
 | ``Four variants of adaptive weighted factoring (AWF-B,C,D,E)``  
-| ``Adaptive factoring (AF)``
-| ``Improved implementation of Adaptive factoring (mAF)``
+| ``Adaptive factoring (AF)``  
+``Improved implementation of Adaptive factoring (mAF)``
 
+**LB4OMP contains the following tool:**
+
+| ``profiling``  
+The \textit{profiling} tool works similar to ``dynamic,1``, yet with timers that capture the average iteration execution time and its standard deviation for the target loops. The collected information is stored in a file, which is read later by the ``FSC``, ``FAC``, ``TAP``, and ``BOLD`` during execution. 
+   
 =================
 How to use LB4OMP
 =================
@@ -39,7 +44,13 @@ The first step is to compile the runtime library. LB4OMP is compiled using the s
 One must ensure that the target OpenMP loops in the application contain the ``schedule(runtime)`` clause. If that is the case, no other changes are required and there is no need to recompile the application code.
 Sequentially, one needs to add the path to the compiled LB4OMP runtime library to the environment variable that the linker uses to load dynamic and shared libraries. For instance, in Linux/Unix environments, one adds the path for the compiled LB4OMP to the ``LD_LIBRARY_PATH`` environment variable.
 
-LB4OMP introduces specific environment variables that need to be defined to select and control the provided scheduling techniques:
+
+LB4OMP introduces specific environment variables that need to be defined to select and control the provided scheduling techniques. These are:
+
+``KMP_CPU_SPEED`` informs LB4OMP about the host CPU speed in MHz. Defining this variable is mandatory, because the timing functions of LB4OMP use it. Only integer values are expected for this environment variable.
+
+``KMP_PROFILE_DATA`` defines the path for the profiling information. Four techniques: ``FSC``, ``FAC``, ``TAP``, and ``BOLD`` require profiling information, such as the average of loop iteration execution times, the standard deviation of loop iteration execution times, and the scheduling overhead of self-scheduling (individual) loop iterations.
+LB4OMP implements a profiling tool that collects such information. The profiling tool uses ``KMP_PROFILE_DATA`` to determine the path where the collected profiling information will be stored. 
 
 =========================================================
 How to Build LB4OMP, the extended LLVM* OpenMP* Libraries
