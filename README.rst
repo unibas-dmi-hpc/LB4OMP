@@ -1,12 +1,54 @@
-========================================
+======
 LB4OMP
-========================================
- LB4OMP is an extended LLVM OpenMP runtime library that supports thirteen dynamic and adaptive loop scheduling techniques from the literature. LB4OMP is a load balancing performance portfolio that can offer improved performance by adapting to the unpredictable variations in application and system during execution. LB4OMP is used to improve applications performance, assess the effectiveness of loop scheduling techniques, and support loop scheduling research in multithreaded applications.
+======
+**LB4OMP** is an extended LLVM OpenMP runtime library that supports thirteen dynamic and adaptive loop scheduling techniques from the literature. LB4OMP is a load balancing performance portfolio that can offer improved performance by adapting to the unpredictable variations in application and system during execution. LB4OMP is used to improve applications performance, assess the effectiveness of loop scheduling techniques, and support loop scheduling research in multithreaded applications.
 
+**LB4OMP contains the following loop scheduling techniques:**
 
-========================================
-How to Build the LLVM* OpenMP* Libraries
-========================================
+OpenMP standard
+
+| ``static``  
+| ``dynamic``    
+``guided``
+
+**Dynamic** and **non-adaptive** loop scheduling techniques **OpenMP non-standard**
+
+``Trapezoid self scheduling (TSS)``
+
+**Dynamic** and **non-adaptive** loop scheduling techniques **newly implemented in LB4OMP**
+
+| ``Fixed size chunk (FSC)``  
+| ``Factoring (FAC)``
+| ``Improved implementation of Factoring (mFAC)``
+| ``Practical variant of factoring (FAC2)`` 
+| ``Tapering (TAP)``  
+``Practical variant of weighted factoring (WF2)``
+
+**Dynamic** and **adaptive** loop scheduling techniques **newly implemented in LB4OMP**
+
+| ``BOLD``  
+| ``Four variants of adaptive weighted factoring (AWF-B,C,D,E)``  
+| ``Adaptive factoring (AF)``
+| ``Improved implementation of Adaptive factoring (mAF)``
+
+=================
+How to use LB4OMP
+=================
+The first step is to compile the runtime library. LB4OMP is compiled using the same guidelines provided by the LLVM OpenMP runtime library as shown in the next section of this README (How to Build LB4OMP, the extended LLVM* OpenMP* Libraries).
+
+One must ensure that the target OpenMP loops in the application contain the ``schedule(runtime)`` clause. If that is the case, no other changes are required and there is no need to recompile the application code.
+Sequentially, one needs to add the path to the compiled LB4OMP runtime library to the environment variable that the linker uses to load dynamic and shared libraries. For instance, in Linux/Unix environments, one adds the path for the compiled LB4OMP to the ``LD_LIBRARY_PATH`` environment variable.
+
+LB4OMP introduces specific environment variables that need to be defined to select and control the provided scheduling techniques:
+
+=========================================================
+How to Build LB4OMP, the extended LLVM* OpenMP* Libraries
+=========================================================
+
+****************************************************
+Adopted from the official LLVM repository README.rst
+****************************************************
+
 This repository requires `CMake <http://www.cmake.org/>`_ v2.8.0 or later.  LLVM
 and Clang need a more recent version which also applies for in-tree builds.  For
 more information than available in this document please see
