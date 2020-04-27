@@ -42,6 +42,7 @@ How to use LB4OMP
 The first step is to compile the runtime library. LB4OMP is compiled using the same guidelines provided by the LLVM OpenMP runtime library as shown in the next section of this README (How to Build LB4OMP, the extended LLVM* OpenMP* Libraries).
 
 One must ensure that the target OpenMP loops in the application contain the ``schedule(runtime)`` clause. If that is the case, no other changes are required and there is no need to recompile the application code.
+
 Sequentially, one needs to add the path to the compiled LB4OMP runtime library to the environment variable that the linker uses to load dynamic and shared libraries. For instance, in Linux/Unix environments, one adds the path for the compiled LB4OMP to the ``LD_LIBRARY_PATH`` environment variable.
 
 
@@ -59,8 +60,6 @@ LB4OMP implements a profiling tool that collects such information. The profiling
 ``KMP_TIME_LOOPS`` defines the path where LB4OMP stores the collected execution time of all OpenMP parallel loops associated with the ``schedule(runtime)`` clause. When this environment variable is not defined, LB4OMP will not collect loops' execution time.
 
 ``KMP_PRINT_CHUNKS`` when this environment variable is set to one, the LB4OMP collects and stores the calculated chunk size for each thread for each scheduling round. This information is stored in the same file as defined by ``KMP_TIME_LOOPS``. This data may be very large depending on the scheduling technique and the size of the OpenMP loop.
-
-
 
 =========================================================
 How to Build LB4OMP, the extended LLVM* OpenMP* Libraries
