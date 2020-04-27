@@ -54,6 +54,10 @@ LB4OMP implements a profiling tool that collects such information. The profiling
 
 ``KMP_WEIGHTS`` can be used by ``WF2`` and ``AWF-B,C,D,E``. It expects a sequence of values separated by commas. These values denote the weights that each core will receive. The weights are used, for example, for heterogeneous systems if one wants to give fewer iterations to slower cores. For instance, if the weights are set as ``{1,0.5}``, the second core will receive half of the chunk size that the first core received. The default ``KMP_WEIGHTS`` value is ``1`` for all cores.
 
+``KMP_MIN`` declares the chunk size parameter for the newly implemented scheduling techniques use.
+
+
+
 =========================================================
 How to Build LB4OMP, the extended LLVM* OpenMP* Libraries
 =========================================================
