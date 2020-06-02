@@ -3,6 +3,10 @@ LB4OMP
 ======
 **LB4OMP** is an extended LLVM OpenMP runtime library that supports thirteen dynamic and adaptive loop scheduling techniques from the literature. LB4OMP is a load balancing performance portfolio that can offer improved performance by adapting to the unpredictable variations in application and system during execution. LB4OMP is used to improve applications performance, assess the effectiveness of loop scheduling techniques, and support loop scheduling research in multithreaded applications.
 
+.. image:: https://zenodo.org/badge/DOI/10.5281/zenodo.3872907.svg
+   :target: https://doi.org/10.5281/zenodo.3872907
+
+
 **LB4OMP contains the following loop scheduling techniques:**
 
 **OpenMP standard**
