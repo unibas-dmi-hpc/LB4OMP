@@ -53,6 +53,10 @@
 std::deque<std::shared_timed_mutex> mutexes;
 /* ----------------------------LB4OMP_extensions------------------------------- */
 
+#include "kmp_stats_timing.h" // by Ali
+#include "kmp_stats.h"   //by Ali
+#include <x86intrin.h>
+extern tsc_tick_count __kmp_stats_start_time; //by Ali
 /* ------------------------------------------------------------------------ */
 /* ------------------------------------------------------------------------ */
 #define LOOP_TIME_MEASURE_START if (getenv("KMP_TIME_LOOPS") !=NULL) { init_loop_timer(loc->psource, ub); } 
@@ -407,6 +411,20 @@ LOOP_TIME_MEASURE_START
     if (schedule == kmp_sch_auto) {
       // mapping and differentiation: in the __kmp_do_serial_initialize()
       schedule = __kmp_auto;
+      //int64_t v = 77;  // by Ali
+      tsc_tick_count tickCount; //by Ali
+      tsc_tick_count::tsc_interval_t interval; // by Ali
+      if (tid == 0){
+      //std::cout << "I am auto, schedule:  " << schedule << std::endl; // by Ali 
+      std::cout << "ticks: " <<  tickCount.getValue() << std::endl; // by Ali
+      //std::cout << "time in seconds " << interval.seconds() << std::endl; // by Ali
+      std::cout << "tick time: " <<  tickCount.tick_time() << std::endl; // by Ali
+      std::cout << "KMP_ARCH_X86_64: " << KMP_ARCH_X86_64 << std::endl; // by Ali
+      std::cout << "KMP_ARCH_X86: " << KMP_ARCH_X86 << std::endl; //by Ali 
+      std::cout << "KMP_HAVE___RDTSC: " << KMP_HAVE___RDTSC << std::endl; // by Ali
+      std::cout << "KMP_HAVE_X86INTRIN_H: " << KMP_HAVE_X86INTRIN_H << std::endl; // by Ali
+      std::cout << "KMP_HAVE_TICK_TIME: " << KMP_HAVE_TICK_TIME << std::endl; // by Ali
+      }
 #ifdef KMP_DEBUG
       {
         char *buff;
