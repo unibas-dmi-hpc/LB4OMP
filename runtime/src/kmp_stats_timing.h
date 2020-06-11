@@ -57,7 +57,8 @@ public:
   tsc_tick_count()
       : my_count(static_cast<int64_t>(__builtin_readcyclecounter())) {}
 #elif KMP_HAVE___RDTSC
-  tsc_tick_count() : my_count(static_cast<int64_t>(__rdtsc())) {}
+  unsigned int dummy;
+  tsc_tick_count() : my_count(static_cast<int64_t>(__rdtscp(&dummy))) {}  //use rdtscp instead of rdtsc  AUTO by Ali
 #else
 #error Must have high resolution timer defined
 #endif

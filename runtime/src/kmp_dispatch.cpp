@@ -65,13 +65,45 @@ extern tsc_tick_count __kmp_stats_start_time; //by Ali
 #define INIT_CHUNK_RECORDING if (getenv("KMP_PRINT_CHUNKS") !=NULL) { init_chunk_sizes((int) tc); }
 #define STORE_CHUNK_INFO if (getenv("KMP_PRINT_CHUNKS") !=NULL) { store_chunk_sizes((int) *p_lb, (int) *p_ub, (int) tid); } 
 
+#define AUTO_iLoopTimer if (AUTO_FLAG == 1) { init_auto_loop_timer(loc->psource, ub);}
+#define AUTO_eLoopTimer if (AUTO_FLAG == 1) { end_auto_loop_timer();}
+
 std::chrono::high_resolution_clock::time_point timeInit;
 std::chrono::high_resolution_clock::time_point timeEnd;
+int AUTO_FLAG = 0;    //AUTO by Ali
+double autoTimerInit; //AUTO by Ali
+double autoTimerEnd;  //AUTO by Ali
+double autoMinDLSTime = -1;   //AUTO by Ali
+int autoMinDLSId = - 1;     //AUTO by Ali
+unsigned int autoPortfolioIndex = 0; //AUTO by Ali
+std::vector<sched_type> autoDLSPortfolio{
+  __kmp_static, /**< static unspecialized */
+  kmp_sch_dynamic_chunked,
+  __kmp_guided, /**< guided unspecialized */
+  kmp_sch_trapezoidal,
+  /* accessible only through KMP_SCHEDULE environment variable */
+  kmp_sch_guided_analytical_chunked,
+  //--------------LB4OMP_extensions----------
+ // kmp_sch_fsc,
+ // kmp_sch_tap,
+//  kmp_sch_fac,
+//  kmp_sch_faca,
+  kmp_sch_fac2,
+  kmp_sch_fac2a,
+  kmp_sch_wf,
+//  kmp_sch_bold,
+  kmp_sch_awf_b,
+  kmp_sch_awf_c,
+  kmp_sch_awf_d,
+  kmp_sch_awf_e,
+  kmp_sch_af,
+  kmp_sch_af_a}; //AUTO by Ali
 std::unordered_map<std::string, std::vector<double> > means_sigmas;
 std::unordered_map<std::string, std::atomic<int> > current_index; //current+1 for mean
 std::atomic<int> profilingDataReady=0;
 double currentMu;
 std::atomic<int> timeUpdates = 0;
+std::atomic<int> autoTimerUpdates = 0;  // AUTO by Ali
 std::atomic<int> chunkUpdates = 0;
 //std::list<std::string> calculatedChunks;
 int * chunkSizeInfo;
@@ -202,6 +234,37 @@ void init_loop_timer(const char* loopLine, long ub){
         timeInit = mytime;
 	  	}
 }
+// function to measure the time at the beginning of the loop execution  - AUTO by Ali
+void init_auto_loop_timer(const char* loopLine, long ub)
+{
+        tsc_tick_count tickCount;
+	int count = 0;
+	count = std::atomic_fetch_add(&autoTimerUpdates, 1);
+    
+		if (count == 0)
+  		{
+	 	    // #iterations "<< (ub+1) 
+	 	    globalLoopline = loopLine;
+	  	    autoTimerInit =  tickCount.getValue() * tickCount.tick_time();
+	  	}
+
+}
+
+// function to measure the time after loop execution - AUTO by Ali
+void end_auto_loop_timer()
+{
+	    int count = 0;
+
+            tsc_tick_count tickCount;      	   
+	    count = std::atomic_fetch_sub(&autoTimerUpdates, 1);
+      
+	    if ( count == 1)
+	    {
+		autoTimerEnd = tickCount.getValue() * tickCount.tick_time();
+                autoTimerEnd = autoTimerEnd - autoTimerInit;
+		//std::cout << "loop: " << globalLoopline << " time: " << autoTimerEnd << std::endl;	
+    	    }
+}
 
 void print_loop_timer(){
 	    std::chrono::high_resolution_clock::time_point mytime;
@@ -309,9 +372,11 @@ void __kmp_dispatch_init_algorithm(ident_t *loc, int gtid,
   //------------------------LB4OMP_extensions------------------------
   kmp_info_t *th;
   kmp_team_t *team;
-// timeUpdates = 0;
-LOOP_TIME_MEASURE_START
 
+  LOOP_TIME_MEASURE_START
+
+  // AUTO by Ali
+  AUTO_iLoopTimer
 
 #ifdef KMP_DEBUG
   typedef typename traits_t<T>::signed_t ST;
@@ -366,7 +431,6 @@ LOOP_TIME_MEASURE_START
   } else {
     pr->flags.ordered = FALSE;
   }
-
   if (schedule == kmp_sch_static) {
     schedule = __kmp_static;
   } else {
@@ -409,22 +473,12 @@ LOOP_TIME_MEASURE_START
     }
 
     if (schedule == kmp_sch_auto) {
+       
+       AUTO_FLAG = 1; //AUTO by Ali
+       
       // mapping and differentiation: in the __kmp_do_serial_initialize()
       schedule = __kmp_auto;
-      //int64_t v = 77;  // by Ali
-      tsc_tick_count tickCount; //by Ali
-      tsc_tick_count::tsc_interval_t interval; // by Ali
-      if (tid == 0){
-      //std::cout << "I am auto, schedule:  " << schedule << std::endl; // by Ali 
-      std::cout << "ticks: " <<  tickCount.getValue() << std::endl; // by Ali
-      //std::cout << "time in seconds " << interval.seconds() << std::endl; // by Ali
-      std::cout << "tick time: " <<  tickCount.tick_time() << std::endl; // by Ali
-      std::cout << "KMP_ARCH_X86_64: " << KMP_ARCH_X86_64 << std::endl; // by Ali
-      std::cout << "KMP_ARCH_X86: " << KMP_ARCH_X86 << std::endl; //by Ali 
-      std::cout << "KMP_HAVE___RDTSC: " << KMP_HAVE___RDTSC << std::endl; // by Ali
-      std::cout << "KMP_HAVE_X86INTRIN_H: " << KMP_HAVE_X86INTRIN_H << std::endl; // by Ali
-      std::cout << "KMP_HAVE_TICK_TIME: " << KMP_HAVE_TICK_TIME << std::endl; // by Ali
-      }
+      //std::cout << "KMP_HAVE___RDTSC: " << KMP_HAVE___RDTSC << std::endl; // by Ali
 #ifdef KMP_DEBUG
       {
         char *buff;
@@ -438,6 +492,43 @@ LOOP_TIME_MEASURE_START
       }
 #endif
     }
+    // AUTO by Ali
+    if(AUTO_FLAG)
+    {
+      schedule = autoDLSPortfolio[autoPortfolioIndex];
+      if (tid == 0)
+      {
+        if(autoMinDLSId == -1)
+        {
+            if(autoTimerEnd != 0)
+	    {
+		autoMinDLSTime = autoTimerEnd;
+                autoMinDLSId = autoPortfolioIndex;
+            }
+        }
+	else
+	{
+           if(autoTimerEnd < autoMinDLSTime)
+           {
+		autoMinDLSTime = autoTimerEnd;
+		autoMinDLSId = autoPortfolioIndex;
+           }
+        }
+        if (autoPortfolioIndex < autoDLSPortfolio.size()-1)
+        {
+           std::cout << "minDLSID: " << autoMinDLSId << " time: " << autoMinDLSTime << std::endl;
+           std::cout << "I am auto, testing, index: " << autoPortfolioIndex << std::endl;
+           autoPortfolioIndex++;
+        }
+        else
+	{
+	   schedule = autoDLSPortfolio[autoMinDLSId];
+           std::cout << "I am auto, best schedule is : " << autoDLSPortfolio[autoMinDLSId]  << std::endl;
+	}
+	
+      }
+    }
+
 
     /* guided analytical not safe for too many threads */
     if (schedule == kmp_sch_guided_analytical_chunked && nproc > 1 << 20) {
@@ -4562,6 +4653,9 @@ if((int)tid == 0){
   /* --------------------------LB4OMP_extensions-----------------------------*/
   if(status == 0){
     LOOP_TIME_MEASURE_END
+    // AUTO by Ali
+    AUTO_eLoopTimer
+
   }else{
     STORE_CHUNK_INFO
   }
