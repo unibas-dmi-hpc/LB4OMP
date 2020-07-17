@@ -65,17 +65,39 @@ extern tsc_tick_count __kmp_stats_start_time; //by Ali
 #define INIT_CHUNK_RECORDING if (getenv("KMP_PRINT_CHUNKS") !=NULL) { init_chunk_sizes((int) tc); }
 #define STORE_CHUNK_INFO if (getenv("KMP_PRINT_CHUNKS") !=NULL) { store_chunk_sizes((int) *p_lb, (int) *p_ub, (int) tid); } 
 
-#define AUTO_iLoopTimer if (AUTO_FLAG == 1) { init_auto_loop_timer(loc->psource, ub);}
-#define AUTO_eLoopTimer if (AUTO_FLAG == 1) { end_auto_loop_timer();}
+#define AUTO_iLoopTimer if (AUTO_FLAG == 1) { init_auto_loop_timer(nproc, tid);}
+#define AUTO_eLoopTimer if (AUTO_FLAG == 1) { end_auto_loop_timer(nproc, tid);}
 
 std::chrono::high_resolution_clock::time_point timeInit;
 std::chrono::high_resolution_clock::time_point timeEnd;
-int AUTO_FLAG = 0;    //AUTO by Ali
-double autoTimerInit; //AUTO by Ali
-double autoTimerEnd;  //AUTO by Ali
-double autoMinDLSTime = -1;   //AUTO by Ali
-int autoMinDLSId = - 1;     //AUTO by Ali
-unsigned int autoPortfolioIndex = 0; //AUTO by Ali
+
+// ---------------------------------------- Auto extension variables --------------------
+int AUTO_FLAG = 0;    
+volatile double autoTimerInit; 
+volatile double autoTimerEnd;  
+double autoLBMeanMax; 
+std::atomic<int> autoMeanThreadTime = -1; 
+std::atomic<int> autoTimerFirstEntry = 0; 
+std::atomic<int> autoThreadCount = 0;  
+  
+  
+     
+std::atomic<unsigned int> autoPortfolioIndex = 0; 
+
+std::atomic<int> autoEnter = 0;
+std::atomic<int> autoWait = 1;
+
+const char* autoLoopName;
+
+std::unordered_map<std::string, std::vector<double> > autoLoopData; //holds loop data
+//								    0. autoSearch
+//								    1. best or current DLS
+//								    2. best or current DLS time
+//								    3. best or current DLS LB
+//								    4. min DLS
+//                                                                  5. min DLS time
+//                                                                  6. min DLS LB
+
 std::vector<sched_type> autoDLSPortfolio{
   __kmp_static, /**< static unspecialized */
   kmp_sch_dynamic_chunked,
@@ -98,12 +120,16 @@ std::vector<sched_type> autoDLSPortfolio{
   kmp_sch_awf_e,
   kmp_sch_af,
   kmp_sch_af_a}; //AUTO by Ali
+
+// ------------------------------------------ end Auto extension variables -------------------- 
+
+
 std::unordered_map<std::string, std::vector<double> > means_sigmas;
 std::unordered_map<std::string, std::atomic<int> > current_index; //current+1 for mean
 std::atomic<int> profilingDataReady=0;
 double currentMu;
 std::atomic<int> timeUpdates = 0;
-std::atomic<int> autoTimerUpdates = 0;  // AUTO by Ali
+
 std::atomic<int> chunkUpdates = 0;
 //std::list<std::string> calculatedChunks;
 int * chunkSizeInfo;
@@ -234,35 +260,141 @@ void init_loop_timer(const char* loopLine, long ub){
         timeInit = mytime;
 	  	}
 }
-// function to measure the time at the beginning of the loop execution  - AUTO by Ali
-void init_auto_loop_timer(const char* loopLine, long ub)
+
+// search for the best DLS technique within portfolio for a specific loop
+void auto_DLS_Search()
 {
-        tsc_tick_count tickCount;
-	int count = 0;
-	count = std::atomic_fetch_add(&autoTimerUpdates, 1);
+
+   printf(" LoopName: %s, DLS: %lf, time: %lf , LB: %lf \n", autoLoopName, autoLoopData.at(autoLoopName).at(1), autoLoopData.at(autoLoopName).at(2), autoLoopData.at(autoLoopName).at(3));
+
+
+
+  //if current time < min time OR min time == -1 i.e. no identified min yet
+  if((autoLoopData.at(autoLoopName).at(2) < autoLoopData.at(autoLoopName).at(5)) || (autoLoopData.at(autoLoopName).at(5) == -1.0))
+  {
+    //min DLS = current DLS
+    autoLoopData.at(autoLoopName).at(4) = autoLoopData.at(autoLoopName).at(1);
+    //min time = current time 
+    autoLoopData.at(autoLoopName).at(5) = autoLoopData.at(autoLoopName).at(2);
+    //min LB = current LB
+    autoLoopData.at(autoLoopName).at(6) = autoLoopData.at(autoLoopName).at(3);
+  }
+
+
+
+  //Option 1: Exhaustive search  - try all DLS techniques and select the best one
+  if (autoPortfolioIndex < autoDLSPortfolio.size())
+  {
+    autoLoopData.at(autoLoopName).at(1) = autoPortfolioIndex; // select next DLS technique
+    autoPortfolioIndex++; // increment index
+
+  }
+  else //we tested all of the DLS portfolio
+  { 
+   //set scheduler to the minimum DLS technique
+    autoLoopData.at(autoLoopName).at(1) = autoLoopData.at(autoLoopName).at(4);
+   //reset index again to 0
+   autoPortfolioIndex = 0;
+   // set auto search of this loop to zero ...we already finshed the search
+   autoLoopData.at(autoLoopName).at(0) = 0.0;
+  
+   printf("[AUTO] identified best DLS to be %d \n", (int) autoLoopData.at(autoLoopName).at(4));
+
+  }
+  
+}
+
+
+// function to measure the time at the beginning of the loop execution  - AUTO by Ali
+void init_auto_loop_timer(int nproc, int tid)
+{
+
+         int flag = std::atomic_fetch_add(&autoTimerFirstEntry, 1);
+ 
+        //tsc_tick_count tickThreadCount[nproc];
+ 
     
-		if (count == 0)
+        //autoThreadTimerInit[tid] =  tickThreadCount[tid].getValue() * tickThreadCount[tid].tick_time()*1000; //time in seconds
+
+		if (flag == 0) //first thread to enter
   		{
-	 	    // #iterations "<< (ub+1) 
-	 	    globalLoopline = loopLine;
-	  	    autoTimerInit =  tickCount.getValue() * tickCount.tick_time();
+ 
+                    tsc_tick_count tickCount;
+                    autoTimerFirstEntry = 1;  
+                   
+                  
+                    // #iterations "<< (ub+1) 
+	 	    
+	  	    autoTimerInit =  tickCount.getValue() * tickCount.tick_time()*1000; //time in seconds
+                    //printf("tid: %d, init time: %lf \n", tid, autoTimerInit);
 	  	}
 
 }
 
 // function to measure the time after loop execution - AUTO by Ali
-void end_auto_loop_timer()
+void end_auto_loop_timer(int nproc, int tid)
 {
-	    int count = 0;
-
-            tsc_tick_count tickCount;      	   
-	    count = std::atomic_fetch_sub(&autoTimerUpdates, 1);
       
-	    if ( count == 1)
+           	   
+            int localNProc = 0;
+       
+            double time[nproc];
+           
+            
+            tsc_tick_count tickCount[nproc];
+      	   
+      
+            
+            time[tid] =  tickCount[tid].getValue() * tickCount[tid].tick_time()*1000; // time in ms
+           
+            
+
+            time[tid] -= autoTimerInit;
+            
+            //std::cout << "tid: " << tid << " time: " << time[tid] << "\n";
+
+            std::atomic_fetch_add(&autoMeanThreadTime, time[tid]); //accumulate thread finishing times in ms
+           
+            localNProc = std::atomic_fetch_add(&autoThreadCount, 1); //number of accummulations, should be equal to nproc
+ 
+            //std::cout << "time[" << tid << "]: " << time[tid] << "\n";
+            //printf("time[%d]: %lf \n", tid, time[tid]);
+            //std::cout << "tid " << tid << "autoMeanThreadTime: "  << autoMeanThreadTime << "\n";
+           
+             
+	    if ( localNProc == nproc - 1) // last thread to leave the loop
 	    {
-		autoTimerEnd = tickCount.getValue() * tickCount.tick_time();
-                autoTimerEnd = autoTimerEnd - autoTimerInit;
-		//std::cout << "loop: " << globalLoopline << " time: " << autoTimerEnd << std::endl;	
+               
+                int localmean =  std::atomic_fetch_add(&autoMeanThreadTime, 0); // fetch the latest value 
+                localNProc = std::atomic_fetch_add(&autoThreadCount, 0); //fetch the latest value
+                
+               
+		autoTimerEnd = time[tid]; //Last thread to finish, i.e. Loop finishing time in ms
+                // calculate LB by mean/max
+                autoMeanThreadTime = localmean/localNProc; //mean thread execution time
+
+                autoLBMeanMax =  autoMeanThreadTime /   autoTimerEnd; //mean/max
+		//printf(" time: %lf ,  mean: %d, P: %d, LB: %lf \n", autoTimerEnd, autoMeanThreadTime, localNProc, autoLBMeanMax);
+                
+                autoThreadCount = 0; // init thread count
+                autoMeanThreadTime = 0; // init mean
+                autoTimerFirstEntry = 0; // reset flag	
+
+                autoEnter = 0; //reset flag
+                autoWait  = 1; //reset flag
+
+                //update loop information
+                autoLoopData.at(autoLoopName).at(2) = autoTimerEnd; // update execution time
+                 
+                // check if load imbalance is increased from previous time ...also time
+                if (autoLBMeanMax < (autoLoopData.at(autoLoopName).at(3) - 0.01 ) ) // if load imbalance increased with margin
+                {
+                // set autoSearch to 1
+                printf("load imbalance increased from %lf to %lf \n Setting autoSearch ...\n",autoLoopData.at(autoLoopName).at(3), autoLBMeanMax );
+                autoLoopData.at(autoLoopName).at(0) = 1.0;
+                }
+                autoLoopData.at(autoLoopName).at(3) = autoLBMeanMax; // update LB
+
     	    }
 }
 
@@ -492,43 +624,55 @@ void __kmp_dispatch_init_algorithm(ident_t *loc, int gtid,
       }
 #endif
     }
+    
     // AUTO by Ali
     if(AUTO_FLAG)
-    {
-      schedule = autoDLSPortfolio[autoPortfolioIndex];
-      if (tid == 0)
-      {
-        if(autoMinDLSId == -1)
-        {
-            if(autoTimerEnd != 0)
-	    {
-		autoMinDLSTime = autoTimerEnd;
-                autoMinDLSId = autoPortfolioIndex;
-            }
-        }
-	else
-	{
-           if(autoTimerEnd < autoMinDLSTime)
-           {
-		autoMinDLSTime = autoTimerEnd;
-		autoMinDLSId = autoPortfolioIndex;
-           }
-        }
-        if (autoPortfolioIndex < autoDLSPortfolio.size()-1)
-        {
-           std::cout << "minDLSID: " << autoMinDLSId << " time: " << autoMinDLSTime << std::endl;
-           std::cout << "I am auto, testing, index: " << autoPortfolioIndex << std::endl;
-           autoPortfolioIndex++;
-        }
-        else
-	{
-	   schedule = autoDLSPortfolio[autoMinDLSId];
-           std::cout << "I am auto, best schedule is : " << autoDLSPortfolio[autoMinDLSId]  << std::endl;
-	}
-	
-      }
-    }
+    {  
 
+    //only first thread will enter ...
+    if (std::atomic_fetch_add(&autoEnter,1) == 0)
+    {
+         //printf("tid: %d ...entered \n", tid);
+
+         autoLoopName = loc->psource;
+
+         //check if we have data about this loop
+         if (autoLoopData.find(autoLoopName) == autoLoopData.end()) //if no data about this loop
+         {
+            //set a new loop record and set autoSearch to 1
+            std::vector<double> values(7);
+            values[0] = 1.0; //autoSearch
+            values[1] = -1.0; //best or current DLS ...index to what was last tried 
+            values[2] = -1.0; //best or current time
+            values[3] = -1.0; //best or current LB
+            values[4] = -1.0; //minDLS so far
+            values[5] = -1.0; //min DLS time
+            values[6] = -1.0; //min DLS LB
+    
+             //create a new record
+             autoLoopData.insert(std::pair<std::string,std::vector<double>>(loc->psource, values));
+          }
+          if(autoLoopData.at(autoLoopName).at(0) == 1.0) //if autoSearch == 1 
+          {
+             auto_DLS_Search();
+          }
+          
+          std::atomic_fetch_sub(&autoWait,1); //allow other threads to continue execution
+       }
+       else  //others should wait until we update the selected schedule
+       {
+        while(std::atomic_fetch_sub(&autoWait,0) == 1)
+        ;
+        //printf("tid: %d ...waited \n", tid);
+  
+       }     
+
+      //set schedule = best schedule for this loop
+      schedule = autoDLSPortfolio[(int) autoLoopData.at(autoLoopName).at(1)];
+
+
+    } //end auto flag
+    
 
     /* guided analytical not safe for too many threads */
     if (schedule == kmp_sch_guided_analytical_chunked && nproc > 1 << 20) {
@@ -5466,6 +5610,7 @@ void __kmp_aux_dispatch_fini_chunk_4u(ident_t *loc, kmp_int32 gtid) {
 
 void __kmp_aux_dispatch_fini_chunk_8u(ident_t *loc, kmp_int32 gtid) {
   __kmp_dispatch_finish_chunk<kmp_uint64>(gtid, loc);
+
 }
 
 #endif /* KMP_GOMP_COMPAT */
