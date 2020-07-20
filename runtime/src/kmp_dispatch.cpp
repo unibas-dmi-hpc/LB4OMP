@@ -72,18 +72,16 @@ std::chrono::high_resolution_clock::time_point timeInit;
 std::chrono::high_resolution_clock::time_point timeEnd;
 
 // ---------------------------------------- Auto extension variables --------------------
-int AUTO_FLAG = 0;    
-volatile double autoTimerInit; 
+
+int AUTO_FLAG = 0;
+volatile double autoTimerInit;
 volatile double autoTimerEnd;  
 double autoLBMeanMax; 
 std::atomic<int> autoMeanThreadTime = -1; 
 std::atomic<int> autoTimerFirstEntry = 0; 
 std::atomic<int> autoThreadCount = 0;  
   
-  
-     
-std::atomic<unsigned int> autoPortfolioIndex = 0; 
-
+ 
 std::atomic<int> autoEnter = 0;
 std::atomic<int> autoWait = 1;
 
@@ -97,29 +95,31 @@ std::unordered_map<std::string, std::vector<double> > autoLoopData; //holds loop
 //								    4. min DLS
 //                                                                  5. min DLS time
 //                                                                  6. min DLS LB
+//                                                                  7. search trials
 
+
+// LB4OMP extended DLS portfolio ...scheduling techniques are ordered according to their overhead/scheduling/load balancing capacity
 std::vector<sched_type> autoDLSPortfolio{
-  __kmp_static, /**< static unspecialized */
-  kmp_sch_dynamic_chunked,
-  __kmp_guided, /**< guided unspecialized */
-  kmp_sch_trapezoidal,
-  /* accessible only through KMP_SCHEDULE environment variable */
-  kmp_sch_guided_analytical_chunked,
+  kmp_sch_static_chunked, // STATIC  
+  kmp_sch_dynamic_chunked, // SS
+  __kmp_guided, // GSS
+  kmp_sch_trapezoidal, // TSS
+  kmp_sch_guided_analytical_chunked, // LLVM RTL original auto, which is guided with minimum chunk size
   //--------------LB4OMP_extensions----------
- // kmp_sch_fsc,
- // kmp_sch_tap,
-//  kmp_sch_fac,
-//  kmp_sch_faca,
+ // kmp_sch_fsc,  // requires profiling
+ // kmp_sch_tap,  // requires profiling 
+//  kmp_sch_fac,  // requires profiling
+//  kmp_sch_faca, // requires profiling
   kmp_sch_fac2,
   kmp_sch_fac2a,
   kmp_sch_wf,
-//  kmp_sch_bold,
+//  kmp_sch_bold,  // requires profiling
   kmp_sch_awf_b,
   kmp_sch_awf_c,
   kmp_sch_awf_d,
   kmp_sch_awf_e,
   kmp_sch_af,
-  kmp_sch_af_a}; //AUTO by Ali
+  kmp_sch_af_a}; 
 
 // ------------------------------------------ end Auto extension variables -------------------- 
 
@@ -261,19 +261,38 @@ void init_loop_timer(const char* loopLine, long ub){
 	  	}
 }
 
-// search for the best DLS technique within portfolio for a specific loop
+// -------------------------- LB4OMP AUTO Extension -------------------------------------------------------//
+//  June 2020
+//  Ali Mohammed, <ali.mohammed@unibas.ch>
+//  University of Basel, Switzerland
+//  -------------------------------------------------------------------------------------------------------//
+
+
+/*---------------------------------------------- auto_DLS_Search ------------------------------------------*/
+// Search for the best DLS technique within portfolio for a specific loop
+// Sets the best identified DLS technique in autoLoopData[loopName][4]
+// Identifies the best DLS technique based on loop execution time
+// Considers loop execution time and load imbalance measure by mean/max ...and cov, ... etc (extension)
+// Supports different search/optimization methods
+// 1. Exhaustive search 
+// 2. Binary search
+// 3. Fuzzy logic
+// 4. Random
+// ...Search/optimization method can be changed using environment variable: KMP_AUTO_Search_Method (to be extended)
 void auto_DLS_Search()
 {
+   double currentPortfolioIndex =  autoLoopData.at(autoLoopName).at(1);
+   unsigned int searchTrials = (int) autoLoopData.at(autoLoopName).at(7);
 
-   printf(" LoopName: %s, DLS: %lf, time: %lf , LB: %lf \n", autoLoopName, autoLoopData.at(autoLoopName).at(1), autoLoopData.at(autoLoopName).at(2), autoLoopData.at(autoLoopName).at(3));
+   printf(" LoopName: %s, DLS: %lf, time: %lf , LB: %lf \n", autoLoopName, currentPortfolioIndex, autoLoopData.at(autoLoopName).at(2), autoLoopData.at(autoLoopName).at(3));
 
 
-
+  // Record the best DLS technique found so far ...
   //if current time < min time OR min time == -1 i.e. no identified min yet
   if((autoLoopData.at(autoLoopName).at(2) < autoLoopData.at(autoLoopName).at(5)) || (autoLoopData.at(autoLoopName).at(5) == -1.0))
   {
     //min DLS = current DLS
-    autoLoopData.at(autoLoopName).at(4) = autoLoopData.at(autoLoopName).at(1);
+    autoLoopData.at(autoLoopName).at(4) = currentPortfolioIndex;
     //min time = current time 
     autoLoopData.at(autoLoopName).at(5) = autoLoopData.at(autoLoopName).at(2);
     //min LB = current LB
@@ -283,18 +302,20 @@ void auto_DLS_Search()
 
 
   //Option 1: Exhaustive search  - try all DLS techniques and select the best one
-  if (autoPortfolioIndex < autoDLSPortfolio.size())
+  if (searchTrials < autoDLSPortfolio.size())
   {
-    autoLoopData.at(autoLoopName).at(1) = autoPortfolioIndex; // select next DLS technique
-    autoPortfolioIndex++; // increment index
-
+    currentPortfolioIndex++; //increment index
+    // if current index is higher than the portfolio size
+    currentPortfolioIndex = currentPortfolioIndex < autoDLSPortfolio.size()? currentPortfolioIndex: 0.0;
+    autoLoopData.at(autoLoopName).at(1) = currentPortfolioIndex; // select next DLS technique
+    autoLoopData.at(autoLoopName).at(7)++; //increment search trials
   }
   else //we tested all of the DLS portfolio
   { 
    //set scheduler to the minimum DLS technique
     autoLoopData.at(autoLoopName).at(1) = autoLoopData.at(autoLoopName).at(4);
-   //reset index again to 0
-   autoPortfolioIndex = 0;
+   //reset search trial counter
+    autoLoopData.at(autoLoopName).at(7) = 0.0;
    // set auto search of this loop to zero ...we already finshed the search
    autoLoopData.at(autoLoopName).at(0) = 0.0;
   
@@ -640,7 +661,7 @@ void __kmp_dispatch_init_algorithm(ident_t *loc, int gtid,
          if (autoLoopData.find(autoLoopName) == autoLoopData.end()) //if no data about this loop
          {
             //set a new loop record and set autoSearch to 1
-            std::vector<double> values(7);
+            std::vector<double> values(8);
             values[0] = 1.0; //autoSearch
             values[1] = -1.0; //best or current DLS ...index to what was last tried 
             values[2] = -1.0; //best or current time
@@ -648,6 +669,7 @@ void __kmp_dispatch_init_algorithm(ident_t *loc, int gtid,
             values[4] = -1.0; //minDLS so far
             values[5] = -1.0; //min DLS time
             values[6] = -1.0; //min DLS LB
+            values[7] = 0.0;  //search trials 
     
              //create a new record
              autoLoopData.insert(std::pair<std::string,std::vector<double>>(loc->psource, values));
@@ -669,6 +691,11 @@ void __kmp_dispatch_init_algorithm(ident_t *loc, int gtid,
 
       //set schedule = best schedule for this loop
       schedule = autoDLSPortfolio[(int) autoLoopData.at(autoLoopName).at(1)];
+     // chunk = min_chunk = 10; // set minimum chunk size
+     // pr->u.p.min_chunk = min_chunk;
+     // chunk_spec = nproc * (min_chunk + 1); // min remaining
+     // pr->u.p.chunk_spec = chunk_spec;
+     
 
 
     } //end auto flag
