@@ -646,60 +646,6 @@ void __kmp_dispatch_init_algorithm(ident_t *loc, int gtid,
 #endif
     }
     
-    // AUTO by Ali
-    if(AUTO_FLAG)
-    {  
-
-    //only first thread will enter ...
-    if (std::atomic_fetch_add(&autoEnter,1) == 0)
-    {
-         //printf("tid: %d ...entered \n", tid);
-
-         autoLoopName = loc->psource;
-
-         //check if we have data about this loop
-         if (autoLoopData.find(autoLoopName) == autoLoopData.end()) //if no data about this loop
-         {
-            //set a new loop record and set autoSearch to 1
-            std::vector<double> values(8);
-            values[0] = 1.0; //autoSearch
-            values[1] = -1.0; //best or current DLS ...index to what was last tried 
-            values[2] = -1.0; //best or current time
-            values[3] = -1.0; //best or current LB
-            values[4] = -1.0; //minDLS so far
-            values[5] = -1.0; //min DLS time
-            values[6] = -1.0; //min DLS LB
-            values[7] = 0.0;  //search trials 
-    
-             //create a new record
-             autoLoopData.insert(std::pair<std::string,std::vector<double>>(loc->psource, values));
-          }
-          if(autoLoopData.at(autoLoopName).at(0) == 1.0) //if autoSearch == 1 
-          {
-             auto_DLS_Search();
-          }
-          
-          std::atomic_fetch_sub(&autoWait,1); //allow other threads to continue execution
-       }
-       else  //others should wait until we update the selected schedule
-       {
-        while(std::atomic_fetch_sub(&autoWait,0) == 1)
-        ;
-        //printf("tid: %d ...waited \n", tid);
-  
-       }     
-
-      //set schedule = best schedule for this loop
-      schedule = autoDLSPortfolio[(int) autoLoopData.at(autoLoopName).at(1)];
-     // chunk = min_chunk = 10; // set minimum chunk size
-     // pr->u.p.min_chunk = min_chunk;
-     // chunk_spec = nproc * (min_chunk + 1); // min remaining
-     // pr->u.p.chunk_spec = chunk_spec;
-     
-
-
-    } //end auto flag
-    
 
     /* guided analytical not safe for too many threads */
     if (schedule == kmp_sch_guided_analytical_chunked && nproc > 1 << 20) {
@@ -775,16 +721,72 @@ void __kmp_dispatch_init_algorithm(ident_t *loc, int gtid,
       tc = 0; // zero-trip
     }
   }
-  	//printf("HELLO I AM HERE before\n");
-	// Initialize array for storing the chunk sizes information
-  	// if(tid==0)
-  	// {
-    	INIT_CHUNK_RECORDING
-    	//init_chunk_sizes((int) tc);
-  	// }
-  	
-    //printf("HELLO I AM HERE after\n");
 
+
+// AUTO by Ali
+    if(AUTO_FLAG)
+    {
+
+    //only first thread will enter ...
+    if (std::atomic_fetch_add(&autoEnter,1) == 0)
+    {
+         //printf("tid: %d ...entered \n", tid);
+
+         autoLoopName = loc->psource;
+
+         //check if we have data about this loop
+         if (autoLoopData.find(autoLoopName) == autoLoopData.end()) //if no data about this loop
+         {
+            //set a new loop record and set autoSearch to 1
+            std::vector<double> values(8);
+            values[0] = 1.0; //autoSearch
+            values[1] = -1.0; //best or current DLS ...index to what was last tried 
+            values[2] = -1.0; //best or current time
+            values[3] = -1.0; //best or current LB
+            values[4] = -1.0; //minDLS so far
+            values[5] = -1.0; //min DLS time
+            values[6] = -1.0; //min DLS LB
+            values[7] = 0.0;  //search trials 
+
+             //create a new record
+             autoLoopData.insert(std::pair<std::string,std::vector<double>>(loc->psource, values));
+          }
+          if(autoLoopData.at(autoLoopName).at(0) == 1.0) //if autoSearch == 1 
+          {
+             auto_DLS_Search();
+          }
+
+          //printf("tc: %d, tid: %d, nproc: %d \n", tc, tid, nproc);
+
+          std::atomic_fetch_sub(&autoWait,1); //allow other threads to continue execution
+       }
+       else  //others should wait until we update the selected schedule
+       {
+        while(std::atomic_fetch_sub(&autoWait,0) == 1)
+        ;
+        //printf("tid: %d ...waited \n", tid);
+
+       }
+
+      //set schedule = best schedule for this loop
+      schedule = autoDLSPortfolio[(int) autoLoopData.at(autoLoopName).at(1)];
+
+      chunk = min_chunk = 300; // set minimum chunk size
+      pr->u.p.min_chunk = min_chunk;
+      pr->u.p.parm1 = chunk;
+
+
+    } //end auto flag
+
+
+  
+
+
+
+    	INIT_CHUNK_RECORDING
+    	
+  	
+    
   pr->u.p.lb = lb;
   pr->u.p.ub = ub;
   pr->u.p.st = st;
@@ -1742,9 +1744,14 @@ void __kmp_dispatch_init_algorithm(ident_t *loc, int gtid,
     DBL dbl_parm4 = 0; // sum of square of avg iteration times
     DBL dbl_parm5 = 0; // my total (sub-)chunk counter
     DBL dbl_parm6; // number of sub-chunks
-    if(std::getenv("KMP_MIN") != NULL){
-    	parm7 = std::stoi(std::getenv("KMP_MIN"));
-	}
+    
+
+
+    if (min_chunk  > 0) {
+      parm7 = min_chunk; //__kmp_env_min;
+    }
+
+
     KD_TRACE(100,
              ("__kmp_dispatch_init_algorithm: T#%d kmp_sch_af case\n", gtid));
 
@@ -1800,9 +1807,11 @@ void __kmp_dispatch_init_algorithm(ident_t *loc, int gtid,
     DBL dbl_parm4 = 0; // sum of square of avg iteration times
     DBL dbl_parm5 = 0; // my total (sub-)chunk counter
     DBL dbl_parm6; // number of sub-chunks
-    if(std::getenv("KMP_MIN") != NULL){
-    	parm7 = std::stoi(std::getenv("KMP_MIN"));
-	}
+    
+    if (min_chunk  > 0) {
+      parm7 = min_chunk; //__kmp_env_min;
+    }
+
 
     KD_TRACE(100,
              ("__kmp_dispatch_init_algorithm: T#%d kmp_sch_af_a case\n", gtid));
@@ -1851,8 +1860,8 @@ void __kmp_dispatch_init_algorithm(ident_t *loc, int gtid,
   	
     /* This is for profiling only */
     T parm1 = 1; // chunk size
-    if (__kmp_env_min > 0) {
-      parm1 = __kmp_env_min;
+    if (min_chunk  > 0) {
+      parm1 = min_chunk; //__kmp_env_min;
     }
     KD_TRACE(
         100,
