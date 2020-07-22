@@ -87,15 +87,22 @@ std::atomic<int> autoWait = 1;
 
 const char* autoLoopName;
 
-std::unordered_map<std::string, std::vector<double> > autoLoopData; //holds loop data
-//								    0. autoSearch
-//								    1. best or current DLS
-//								    2. best or current DLS time
-//								    3. best or current DLS LB
-//								    4. min DLS
-//                                                                  5. min DLS time
-//                                                                  6. min DLS LB
-//                                                                  7. search trials
+typedef struct 
+{
+int autoSearch;
+int cDLS; // current DLS
+int bestDLS; //Best DLS
+int searchTrials; // number of trials to find the best DLS
+int cChunk; //current chunk size
+int bestChunk; // chunk size of the best DLS technique
+double cTime; // current DLS time
+double bestTime; // loop time of the best DLS
+double cLB; // load imbalance of the current DLS
+double bestLB; // load imbalance of the best DLS
+
+} LoopData;
+
+std::unordered_map<std::string, LoopData > autoLoopData; //holds loop data
 
 
 // LB4OMP extended DLS portfolio ...scheduling techniques are ordered according to their overhead/scheduling/load balancing capacity
@@ -279,24 +286,29 @@ void init_loop_timer(const char* loopLine, long ub){
 // 3. Fuzzy logic
 // 4. Random
 // ...Search/optimization method can be changed using environment variable: KMP_AUTO_Search_Method (to be extended)
-void auto_DLS_Search()
+// Input 
+// N: number of loop iterations
+// P: number of threads
+void auto_DLS_Search(int N, int P) 
 {
-   double currentPortfolioIndex =  autoLoopData.at(autoLoopName).at(1);
-   unsigned int searchTrials = (int) autoLoopData.at(autoLoopName).at(7);
+   int currentPortfolioIndex =  autoLoopData.at(autoLoopName).cDLS;
+   unsigned int searchTrials =  autoLoopData.at(autoLoopName).searchTrials;
 
-   printf(" LoopName: %s, DLS: %lf, time: %lf , LB: %lf \n", autoLoopName, currentPortfolioIndex, autoLoopData.at(autoLoopName).at(2), autoLoopData.at(autoLoopName).at(3));
+   printf(" LoopName: %s, DLS: %d, time: %lf , LB: %lf \n", autoLoopName, currentPortfolioIndex, autoLoopData.at(autoLoopName).cTime, autoLoopData.at(autoLoopName).cLB);
 
 
   // Record the best DLS technique found so far ...
   //if current time < min time OR min time == -1 i.e. no identified min yet
-  if((autoLoopData.at(autoLoopName).at(2) < autoLoopData.at(autoLoopName).at(5)) || (autoLoopData.at(autoLoopName).at(5) == -1.0))
+  if((autoLoopData.at(autoLoopName).cTime < autoLoopData.at(autoLoopName).bestTime) || (autoLoopData.at(autoLoopName).bestTime == -1.0))
   {
-    //min DLS = current DLS
-    autoLoopData.at(autoLoopName).at(4) = currentPortfolioIndex;
-    //min time = current time 
-    autoLoopData.at(autoLoopName).at(5) = autoLoopData.at(autoLoopName).at(2);
-    //min LB = current LB
-    autoLoopData.at(autoLoopName).at(6) = autoLoopData.at(autoLoopName).at(3);
+    //best DLS = current DLS
+    autoLoopData.at(autoLoopName).bestDLS = currentPortfolioIndex;
+    //best time = current time 
+    autoLoopData.at(autoLoopName).bestTime = autoLoopData.at(autoLoopName).cTime;
+    //best LB = current LB
+    autoLoopData.at(autoLoopName).bestLB = autoLoopData.at(autoLoopName).cLB;
+    // best chunk = current chunk
+    autoLoopData.at(autoLoopName).bestChunk = autoLoopData.at(autoLoopName).cChunk;
   }
 
 
@@ -306,20 +318,45 @@ void auto_DLS_Search()
   {
     currentPortfolioIndex++; //increment index
     // if current index is higher than the portfolio size
-    currentPortfolioIndex = currentPortfolioIndex < autoDLSPortfolio.size()? currentPortfolioIndex: 0.0;
-    autoLoopData.at(autoLoopName).at(1) = currentPortfolioIndex; // select next DLS technique
-    autoLoopData.at(autoLoopName).at(7)++; //increment search trials
+    //currentPortfolioIndex = currentPortfolioIndex < autoDLSPortfolio.size()? currentPortfolioIndex: 0.0;
+    currentPortfolioIndex = currentPortfolioIndex % autoDLSPortfolio.size();
+    
+    // Setting chunk size
+    if (currentPortfolioIndex == 0) // STATIC
+    {
+      autoLoopData.at(autoLoopName).cChunk = N/P;
+    }
+    else if (currentPortfolioIndex == 1) // SS
+    {
+      autoLoopData.at(autoLoopName).cChunk = 1;
+    }
+    else
+    {
+      autoLoopData.at(autoLoopName).cChunk = -1;
+    }
+
+   /* 
+    // Golden ratio = 0.618 - choose a chunk size in the "middle" between 1 and N/2P
+    int mul = log2(N/P)*0.618;
+    autoLoopData.at(autoLoopName).cChunk = (N)/((2<<mul)*P);
+    */
+
+
+    autoLoopData.at(autoLoopName).cDLS = currentPortfolioIndex; // select next DLS technique
+    autoLoopData.at(autoLoopName).searchTrials++; //increment search trials
   }
   else //we tested all of the DLS portfolio
   { 
    //set scheduler to the minimum DLS technique
-    autoLoopData.at(autoLoopName).at(1) = autoLoopData.at(autoLoopName).at(4);
+    autoLoopData.at(autoLoopName).cDLS = autoLoopData.at(autoLoopName).bestDLS;
+   // set the chunk size for the best DLS
+   autoLoopData.at(autoLoopName).cChunk = autoLoopData.at(autoLoopName).bestChunk;
    //reset search trial counter
-    autoLoopData.at(autoLoopName).at(7) = 0.0;
+    autoLoopData.at(autoLoopName).searchTrials = 0;
    // set auto search of this loop to zero ...we already finshed the search
-   autoLoopData.at(autoLoopName).at(0) = 0.0;
+   autoLoopData.at(autoLoopName).autoSearch = 0;
   
-   printf("[AUTO] identified best DLS to be %d \n", (int) autoLoopData.at(autoLoopName).at(4));
+   printf("[AUTO] identified best DLS for loop %s to be %d \n", autoLoopName, autoLoopData.at(autoLoopName).bestDLS);
 
   }
   
@@ -405,16 +442,16 @@ void end_auto_loop_timer(int nproc, int tid)
                 autoWait  = 1; //reset flag
 
                 //update loop information
-                autoLoopData.at(autoLoopName).at(2) = autoTimerEnd; // update execution time
+                autoLoopData.at(autoLoopName).cTime = autoTimerEnd; // update execution time
                  
                 // check if load imbalance is increased from previous time ...also time
-                if (autoLBMeanMax < (autoLoopData.at(autoLoopName).at(3) - 0.01 ) ) // if load imbalance increased with margin
+                if (autoLBMeanMax < (autoLoopData.at(autoLoopName).cLB - 0.01 ) ) // if load imbalance increased with margin
                 {
                 // set autoSearch to 1
-                printf("load imbalance increased from %lf to %lf \n Setting autoSearch ...\n",autoLoopData.at(autoLoopName).at(3), autoLBMeanMax );
-                autoLoopData.at(autoLoopName).at(0) = 1.0;
+                printf("[%s] load imbalance increased from %lf to %lf \n Setting autoSearch to 1 ...\n",autoLoopName,autoLoopData.at(autoLoopName).cLB, autoLBMeanMax );
+                autoLoopData.at(autoLoopName).autoSearch = 1;
                 }
-                autoLoopData.at(autoLoopName).at(3) = autoLBMeanMax; // update LB
+                autoLoopData.at(autoLoopName).cLB = autoLBMeanMax; // update LB
 
     	    }
 }
@@ -738,22 +775,26 @@ void __kmp_dispatch_init_algorithm(ident_t *loc, int gtid,
          if (autoLoopData.find(autoLoopName) == autoLoopData.end()) //if no data about this loop
          {
             //set a new loop record and set autoSearch to 1
-            std::vector<double> values(8);
-            values[0] = 1.0; //autoSearch
-            values[1] = -1.0; //best or current DLS ...index to what was last tried 
-            values[2] = -1.0; //best or current time
-            values[3] = -1.0; //best or current LB
-            values[4] = -1.0; //minDLS so far
-            values[5] = -1.0; //min DLS time
-            values[6] = -1.0; //min DLS LB
-            values[7] = 0.0;  //search trials 
+            LoopData data = 
+            {
+                1,  //autoSearch;
+               -1,  // current DLS index or last tried
+               -1,  //Best DLS
+                0,  // searchTrials ...number of trials to find the best DLS
+                0,  //current chunk size
+                0,  // chunk size of the best DLS technique
+             -1.0,  // current DLS time
+             -1.0,  // loop time of the best DLS
+             -1.0,  // load imbalance of the current DLS
+             -1.0   // load imbalance of the best DLS
+            }; 
 
              //create a new record
-             autoLoopData.insert(std::pair<std::string,std::vector<double>>(loc->psource, values));
+             autoLoopData.insert(std::pair<std::string,LoopData>(loc->psource, data));
           }
-          if(autoLoopData.at(autoLoopName).at(0) == 1.0) //if autoSearch == 1 
+          if(autoLoopData.at(autoLoopName).autoSearch == 1) //if autoSearch == 1 
           {
-             auto_DLS_Search();
+             auto_DLS_Search(tc, nproc);
           }
 
           //printf("tc: %d, tid: %d, nproc: %d \n", tc, tid, nproc);
@@ -769,12 +810,14 @@ void __kmp_dispatch_init_algorithm(ident_t *loc, int gtid,
        }
 
       //set schedule = best schedule for this loop
-      schedule = autoDLSPortfolio[(int) autoLoopData.at(autoLoopName).at(1)];
-
-      chunk = min_chunk = 300; // set minimum chunk size
-      pr->u.p.min_chunk = min_chunk;
-      pr->u.p.parm1 = chunk;
-
+      schedule = autoDLSPortfolio[autoLoopData.at(autoLoopName).cDLS];
+      if (autoLoopData.at(autoLoopName).cChunk > 0)
+      {
+          chunk = min_chunk = autoLoopData.at(autoLoopName).cChunk; // set minimum chunk size
+          pr->u.p.min_chunk = min_chunk;
+          pr->u.p.parm1 = chunk;
+      }
+      
 
     } //end auto flag
 
