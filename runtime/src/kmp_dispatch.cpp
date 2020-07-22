@@ -107,26 +107,30 @@ std::unordered_map<std::string, LoopData > autoLoopData; //holds loop data
 
 // LB4OMP extended DLS portfolio ...scheduling techniques are ordered according to their overhead/scheduling/load balancing capacity
 std::vector<sched_type> autoDLSPortfolio{
-  kmp_sch_static_chunked, // STATIC  
-  kmp_sch_dynamic_chunked, // SS
-  __kmp_guided, // GSS
-  kmp_sch_trapezoidal, // TSS
-  kmp_sch_guided_analytical_chunked, // LLVM RTL original auto, which is guided with minimum chunk size
+  kmp_sch_static_chunked, // STATIC    ... 0
+  kmp_sch_trapezoidal, // TSS          ... 1
+  kmp_sch_guided_analytical_chunked,// ... 2 LLVM RTL original auto, which is guided with minimum chunk size
+  __kmp_guided, //                     ... 3 GSS
   //--------------LB4OMP_extensions----------
- // kmp_sch_fsc,  // requires profiling
- // kmp_sch_tap,  // requires profiling 
-//  kmp_sch_fac,  // requires profiling
-//  kmp_sch_faca, // requires profiling
-  kmp_sch_fac2,
-  kmp_sch_fac2a,
-  kmp_sch_wf,
-//  kmp_sch_bold,  // requires profiling
-  kmp_sch_awf_b,
-  kmp_sch_awf_c,
-  kmp_sch_awf_d,
-  kmp_sch_awf_e,
-  kmp_sch_af,
-  kmp_sch_af_a}; 
+  //kmp_sch_fsc,  // requires profiling
+  //kmp_sch_tap,  // requires profiling 
+  //kmp_sch_fac,  // requires profiling
+  //kmp_sch_faca, // requires profiling
+  kmp_sch_fac2,                    //  ... 4
+  kmp_sch_fac2a,                   //  ... 5
+  kmp_sch_wf,                      //  ... 6 
+  //kmp_sch_bold,  // requires profiling
+  kmp_sch_awf_b,                  //   ... 7
+  kmp_sch_awf_c,                  //   ... 8
+  kmp_sch_awf_d,                  //   ... 9
+  kmp_sch_awf_e,                  //   ... 10
+  kmp_sch_af,                     //   ... 11
+  kmp_sch_af_a,                   //   ... 12
+  kmp_sch_dynamic_chunked //           ... 13   SS  
+  }; 
+
+enum DLSPortfolio {STATIC, TSS, GSS_LLVM, GSS, FAC2, mFAC2, WF, AWFB, AWFC, AWFD, AWFE, AF, mAF, SS};
+
 
 // ------------------------------------------ end Auto extension variables -------------------- 
 
@@ -322,11 +326,11 @@ void auto_DLS_Search(int N, int P)
     currentPortfolioIndex = currentPortfolioIndex % autoDLSPortfolio.size();
     
     // Setting chunk size
-    if (currentPortfolioIndex == 0) // STATIC
+    if (currentPortfolioIndex == STATIC) // STATIC
     {
       autoLoopData.at(autoLoopName).cChunk = N/P;
     }
-    else if (currentPortfolioIndex == 1) // SS
+    else if (currentPortfolioIndex == SS) // SS
     {
       autoLoopData.at(autoLoopName).cChunk = 1;
     }
