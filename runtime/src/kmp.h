@@ -350,6 +350,7 @@ typedef enum kmp_sched {
   kmp_sched_af = 115, // mapped to kmp_sch_af (60)
   kmp_sched_af_a = 116, // mapped to kmp_sch_af_a (61)
   kmp_sched_profiling = 117, // mapped to kmp_sch_profiling (62)
+  kmp_sched_awf = 118, // mapped to kmp_sch_awf (63)
   //--------------LB4OMP_extensions----------------
   kmp_sched_upper,
   kmp_sched_default = kmp_sched_static // default scheduling
@@ -402,6 +403,7 @@ enum sched_type : kmp_int32 {
   kmp_sch_af = 60,
   kmp_sch_af_a = 61,
   kmp_sch_profiling = 62,
+  kmp_sch_awf = 63,
   //--------------LB4OMP_extensions----------------
 
   /* accessible only through KMP_SCHEDULE environment variable */
@@ -3085,7 +3087,7 @@ extern enum sched_type __kmp_auto; /* default auto scheduling method */
 extern int __kmp_chunk; /* default runtime chunk size */
 
 //------------------LB4OMP_extensions----------------------
-extern int __kmp_env_min; /* minimum chunk size (default = 0/off) */
+//extern int __kmp_env_min; /* minimum chunk size (default = 0/off) */
 extern int __kmp_env_mu; /* mean value of iteration times [micro s] */
 extern double __kmp_env_sigma; /* sd of iteration times [micro s] */
 extern int __kmp_env_overhead; /* scheduling overhead time [micro s] */

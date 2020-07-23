@@ -290,19 +290,7 @@ void __kmp_dispatch_init_algorithm(ident_t *loc, int gtid,
 
   int active;
   T tc;
-  //------------------------LB4OMP_extensions------------------------
-  // initialize the min chunk switcher
-  T min_chunk = chunk;
-  T chunk_spec;
-  if (__kmp_env_min > 0) { // user has set min chunk size, use it
-    min_chunk = __kmp_env_min;
-    chunk_spec = nproc * (min_chunk + 1); // min remaining
-  } else {
-    chunk_spec = -1; // off, don't use the switcher
-  }
-  pr->u.p.min_chunk = min_chunk;
-  pr->u.p.chunk_spec = chunk_spec;
-  //------------------------LB4OMP_extensions------------------------
+  
   kmp_info_t *th;
   kmp_team_t *team;
 // timeUpdates = 0;
@@ -403,6 +391,13 @@ LOOP_TIME_MEASURE_START
         chunk = KMP_DEFAULT_CHUNK;
       }
     }
+
+  
+    //------------------------LB4OMP_extensions------------------------
+    // initialize the min chunk switcher
+    pr->u.p.min_chunk = chunk;
+    //------------------------LB4OMP_extensions------------------------
+    
 
     if (schedule == kmp_sch_auto) {
       // mapping and differentiation: in the __kmp_do_serial_initialize()
@@ -899,7 +894,7 @@ LOOP_TIME_MEASURE_START
 	// }
 	// DBL sigma = std::stod(getenv("KMP_SIGMA"));
     /* Fixed Size Chunking (FSC) using sigma and overhead inputs */
-    T parm1;
+    int parm1;
     KD_TRACE(100, ("__kmp_dispatch_init_algorithm: T#%d kmp_sch_fsc case\n",
                    gtid));
 
@@ -913,8 +908,8 @@ LOOP_TIME_MEASURE_START
     double l = sigma * P * sqrt(log((double)P));
     parm1 = pow(u / l, 2.0 / 3.0); // chunk size
     // std::cout << "CHUNK-SIZE: " << parm1 << std::endl;
-    if (min_chunk > 0 && parm1 < min_chunk) { // min chunk size
-      parm1 = min_chunk;
+    if (chunk > 0 && parm1 < chunk) { // min chunk size
+      parm1 = chunk;
     }
     pr->u.p.parm1 = parm1;
     if (pr->u.p.parm1 <= 0) {
@@ -954,7 +949,7 @@ LOOP_TIME_MEASURE_START
     double alpha = __kmp_env_alpha;
     double v = alpha * sigma / mu;
 
-    pr->u.p.parm1 = min_chunk; // min chunk size
+    pr->u.p.parm1 = chunk; // min chunk size
     pr->u.p.dbl_parm1 = v; // scaling factor
     if (P > 0) {
       pr->u.p.dbl_parm2 = 1.0 / (double)P; // decreasing factor
@@ -1005,7 +1000,7 @@ LOOP_TIME_MEASURE_START
     pr->u.p.parm1 = parm1;
     pr->u.p.parm2 = parm2;
     pr->u.p.parm3 = parm3;
-    pr->u.p.parm4 = min_chunk;
+    pr->u.p.parm4 = chunk;
     pr->u.p.dbl_parm1 = dbl_parm1;
 
     // init shared variables first time
@@ -1063,7 +1058,7 @@ LOOP_TIME_MEASURE_START
     pr->u.p.parm1 = parm1;
     pr->u.p.parm2 = parm2;
     pr->u.p.parm3 = parm3;
-    pr->u.p.parm4 = min_chunk;
+    pr->u.p.parm4 = chunk;
     pr->u.p.dbl_parm1 = dbl_parm1;
   } // case
   break;
@@ -1080,7 +1075,7 @@ LOOP_TIME_MEASURE_START
     T N = tc;
     dbl_parm1 = (double)N / (double)P;
 
-    pr->u.p.parm1 = min_chunk;
+    pr->u.p.parm1 = chunk;
     pr->u.p.dbl_parm1 = dbl_parm1;
   } // case
   break;
@@ -1105,7 +1100,7 @@ LOOP_TIME_MEASURE_START
 
     pr->u.p.parm1 = parm1;
     pr->u.p.parm2 = parm2;
-    pr->u.p.parm3 = min_chunk;
+    pr->u.p.parm3 = chunk;
     pr->u.p.dbl_parm1 = dbl_parm1;
   } // case
   break;
@@ -1140,7 +1135,44 @@ LOOP_TIME_MEASURE_START
 
     pr->u.p.parm1 = parm1;
     pr->u.p.parm2 = parm2;
-    pr->u.p.parm3 = min_chunk;
+    pr->u.p.parm3 = chunk;
+    pr->u.p.dbl_parm1 = dbl_parm1;
+    pr->u.p.dbl_parm2 = dbl_parm2;
+  } // case
+  break;
+  case kmp_sch_awf: {
+    /* Adaptive Weighted Factoring same as WF but adaptive for time-stepping applications */
+    T parm1; // current chunk size
+    T parm2 = 0; // current batch index
+    DBL dbl_parm1; // factor to be multiplied by chunk
+    DBL dbl_parm2; // my weight
+
+    KD_TRACE(100,
+             ("__kmp_dispatch_init_algorithm: T#%d kmp_sch_awf case\n", gtid));
+
+    T P = nproc;
+    T N = tc;
+    dbl_parm1 = 1.0 / 2.0;
+
+    // init the weight ....check loop record for adaptive weights
+    std::vector<double> weights = __kmp_env_weights;
+
+    // don't compare sum to P, user can decide
+    if ((T) weights.size() == P) {
+      dbl_parm2 = weights[tid];
+    } else {
+      dbl_parm2 = 1.0;
+    }
+
+    parm1 = ceil(dbl_parm1 * N / (double)P); // initial chunk size
+
+    if (parm1 > N) { // chunk size too large
+      parm1 = N;
+    }
+
+    pr->u.p.parm1 = parm1;
+    pr->u.p.parm2 = parm2;
+    pr->u.p.parm3 = chunk;
     pr->u.p.dbl_parm1 = dbl_parm1;
     pr->u.p.dbl_parm2 = dbl_parm2;
   } // case
@@ -1200,7 +1232,7 @@ LOOP_TIME_MEASURE_START
 
     pr->u.p.parm1 = my_bold;
     pr->u.p.l_parm1 = my_time;
-    pr->u.p.parm3 = min_chunk;
+    pr->u.p.parm3 = chunk;
     pr->u.p.dbl_parm1 = a;
     pr->u.p.dbl_parm2 = b;
     pr->u.p.dbl_parm3 = ln_b;
@@ -1260,7 +1292,7 @@ LOOP_TIME_MEASURE_START
     pr->u.p.parm1 = parm1;
     pr->u.p.parm2 = parm2;
     pr->u.p.parm3 = parm3;
-    pr->u.p.parm4 = min_chunk;
+    pr->u.p.parm4 = chunk;
     pr->u.p.l_parm1 = my_time;
     pr->u.p.dbl_parm1 = dbl_parm1;
     pr->u.p.dbl_parm2 = dbl_parm2;
@@ -1315,7 +1347,7 @@ LOOP_TIME_MEASURE_START
     my_time = __kmp_get_ticks();
 
     pr->u.p.parm1 = parm1;
-    pr->u.p.parm2 = min_chunk;
+    pr->u.p.parm2 = chunk;
     pr->u.p.parm3 = parm3;
     pr->u.p.l_parm1 = my_time;
     pr->u.p.dbl_parm1 = dbl_parm1;
@@ -1374,7 +1406,7 @@ LOOP_TIME_MEASURE_START
     pr->u.p.parm1 = parm1;
     pr->u.p.parm2 = parm2;
     pr->u.p.parm3 = parm3;
-    pr->u.p.parm4 = min_chunk;
+    pr->u.p.parm4 = chunk;
     pr->u.p.l_parm1 = my_time;
     pr->u.p.dbl_parm1 = dbl_parm1;
     pr->u.p.dbl_parm2 = dbl_parm2;
@@ -1429,7 +1461,7 @@ LOOP_TIME_MEASURE_START
     my_time = __kmp_get_ticks();
 
     pr->u.p.parm1 = parm1;
-    pr->u.p.parm2 = min_chunk;
+    pr->u.p.parm2 = chunk;
     pr->u.p.parm3 = parm3;
     pr->u.p.l_parm1 = my_time;
     pr->u.p.dbl_parm1 = dbl_parm1;
@@ -1462,9 +1494,7 @@ LOOP_TIME_MEASURE_START
     DBL dbl_parm4 = 0; // sum of square of avg iteration times
     DBL dbl_parm5 = 0; // my total (sub-)chunk counter
     DBL dbl_parm6; // number of sub-chunks
-    if(std::getenv("KMP_MIN") != NULL){
-    	parm7 = std::stoi(std::getenv("KMP_MIN"));
-	}
+    parm7 = chunk; 
     KD_TRACE(100,
              ("__kmp_dispatch_init_algorithm: T#%d kmp_sch_af case\n", gtid));
 
@@ -1520,9 +1550,8 @@ LOOP_TIME_MEASURE_START
     DBL dbl_parm4 = 0; // sum of square of avg iteration times
     DBL dbl_parm5 = 0; // my total (sub-)chunk counter
     DBL dbl_parm6; // number of sub-chunks
-    if(std::getenv("KMP_MIN") != NULL){
-    	parm7 = std::stoi(std::getenv("KMP_MIN"));
-	}
+    parm7 = chunk; 
+	
 
     KD_TRACE(100,
              ("__kmp_dispatch_init_algorithm: T#%d kmp_sch_af_a case\n", gtid));
@@ -1570,10 +1599,9 @@ LOOP_TIME_MEASURE_START
 
   	
     /* This is for profiling only */
-    T parm1 = 1; // chunk size
-    if (__kmp_env_min > 0) {
-      parm1 = __kmp_env_min;
-    }
+    T parm1 = 1; // chunk size    
+    parm1  = chunk;
+
     KD_TRACE(
         100,
         ("__kmp_dispatch_init_algorithm: T#%d kmp_sch_profiling case\n", gtid));
@@ -3321,6 +3349,89 @@ if((int)tid == 0){
         pr->u.p.ordered_upper = limit;
       } // if
     } else {
+      *p_lb = 0;
+      *p_ub = 0;
+      if (p_st != nullptr)
+        *p_st = 0;
+    } // if
+    
+  } // case
+  break;
+ case kmp_sch_awf: {
+    UT counter; // factoring counter
+    UT batch; // batch index
+    T min_chunk = pr->u.p.parm3; // minimum chunk size
+    double factor = pr->u.p.dbl_parm1;
+    double weight = pr->u.p.dbl_parm2;
+    KD_TRACE(100, ("__kmp_dispatch_next_algorithm: T#%d kmp_sch_awf case\n",
+                   gtid));
+    trip = pr->u.p.tc;
+
+    // atomically increase factoring counter
+    counter = test_then_inc<ST>((volatile ST *)&sh->u.s.counter);
+
+    // calculate current batch index
+    batch = counter / nproc;
+
+    while (true) {
+      T cs; // chunk size
+      ST remaining; // signed, because can be < 0
+      init = sh->u.s.iteration; // shared value
+      remaining = trip - init;
+      if (remaining <= 0) { // AC: need to compare with 0 first
+        // nothing to do, don't try atomic op
+        status = 0;
+        break;
+      }
+
+      // calculate current batch's chunk size
+      T old_chunk = pr->u.p.parm1;
+      UT old_batch = pr->u.p.parm2;
+      if (batch == old_batch) { // old batch, already calculated
+        cs = old_chunk;
+      } else {
+        // thread must calculate through to current batch
+        // no synchronization needed, though
+        for (UT i = 0; i < batch - old_batch; i++) {
+          // update chunk with updated chunk
+          old_chunk = ceil(old_chunk * factor); // chunk size
+        }
+        cs = old_chunk; // updated chunk now
+        pr->u.p.parm1 = cs;
+        pr->u.p.parm2 = batch;
+      }
+
+      // apply weight to chunk
+      cs = (T)ceil(weight * cs);
+
+      if (min_chunk > cs) { // check min chunk
+        cs = min_chunk;
+      }
+      limit = init + cs;
+      if (compare_and_swap<ST>(RCAST(volatile ST *, &sh->u.s.iteration),
+                               (ST)init, (ST)limit)) {
+        // CAS was successful, chunk obtained
+        status = 1;
+        if ((last = (limit >= trip)) != 0) // if last chunk
+          limit = trip;
+        --limit;
+        break;
+      } // if
+    } // while
+
+    if (status != 0) {
+      start = pr->u.p.lb;
+      incr = pr->u.p.st;
+      if (p_st != nullptr)
+        *p_st = incr;
+      *p_lb = start + init * incr;
+      *p_ub = start + limit * incr;
+      if (pr->flags.ordered) {
+        pr->u.p.ordered_lower = init;
+        pr->u.p.ordered_upper = limit;
+      } // if
+    } else {
+    printf("[AWF] ...status == 0 ...loop ended?! for thread %d\n", tid);
       *p_lb = 0;
       *p_ub = 0;
       if (p_st != nullptr)

@@ -3731,6 +3731,8 @@ static const char *__kmp_parse_single_omp_schedule(const char *name,
     sched = kmp_sch_af_a;
   else if (!__kmp_strcasecmp_with_sentinel("profiling", ptr, *delim)) /* P */
     sched = kmp_sch_profiling;
+  else if (!__kmp_strcasecmp_with_sentinel("awf", ptr, *delim)) /* AWF */
+    sched = kmp_sch_awf;
     //--------------------LB4OMP_extensions--------------------------
 #if KMP_STATIC_STEAL_ENABLED
   else if (!__kmp_strcasecmp_with_sentinel("static_steal", ptr, *delim))
@@ -3881,6 +3883,9 @@ static void __kmp_stg_print_omp_schedule(kmp_str_buf_t *buffer,
       break;
     case kmp_sch_profiling:
       __kmp_str_buf_print(buffer, "%s,%d'\n", "profiling", __kmp_chunk);
+      break;
+    case kmp_sch_awf:
+      __kmp_str_buf_print(buffer, "%s,%d'\n", "awf", __kmp_chunk);
       break;
       //---------------LB4OMP_extensions----------------------
     case kmp_sch_static:
@@ -4833,7 +4838,7 @@ static void __kmp_stg_print_omp_tool_libraries(kmp_str_buf_t *buffer,
 } // __kmp_stg_print_omp_tool_libraries
 
 //-------------------------LB4OMP_extensions----------------------------
-
+/*
 static void __kmp_stg_parse_env_min(char const *name, char const *value,
                                    void *data) {
   __kmp_stg_parse_int(name, value, 0, INT_MAX, &__kmp_env_min);
@@ -4843,6 +4848,7 @@ static void __kmp_stg_print_env_min(kmp_str_buf_t *buffer, char const *name,
                                    void *data) {
   __kmp_stg_print_int(buffer, name, __kmp_env_min);
 } // __kmp_stg_print_env_min
+*/
 
 static void __kmp_stg_parse_env_mu(char const *name, char const *value,
                                    void *data) {
@@ -5209,7 +5215,7 @@ static kmp_setting_t __kmp_stg_table[] = {
 #endif
 
     //------------------LB4OMP_extensions------------------
-    {"KMP_MIN", __kmp_stg_parse_env_min, __kmp_stg_print_env_min, NULL, 0, 0},
+   // {"KMP_MIN", __kmp_stg_parse_env_min, __kmp_stg_print_env_min, NULL, 0, 0},
     {"KMP_MU", __kmp_stg_parse_env_mu, __kmp_stg_print_env_mu, NULL, 0, 0},
     {"KMP_SIGMA", __kmp_stg_parse_env_sigma, __kmp_stg_print_env_sigma, NULL, 0,
      0},
