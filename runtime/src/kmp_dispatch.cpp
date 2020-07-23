@@ -64,6 +64,29 @@ std::deque<std::shared_timed_mutex> mutexes;
 std::chrono::high_resolution_clock::time_point timeInit;
 std::chrono::high_resolution_clock::time_point timeEnd;
 std::unordered_map<std::string, std::vector<double> > means_sigmas;
+
+// ------------------------------------- AWF data -----------------------------------------------------
+typedef struct 
+{
+int timeStep;
+std::vector<int> workPerStep;
+std::vector<int> sumWorkPerStep;
+std::vector<double> executionTimes;
+std::vector<double> sumExecutionTimes;
+std::vector<double> weights;
+
+} AWFDataRecord;
+
+std::unordered_map<std::string, AWFDataRecord > AWFData; // AWF weights
+
+const char* cLoopName; //current loop name
+
+std::atomic<int> AWFEnter = 0;
+std::atomic<int> AWFWait = 1;
+std::atomic<int> AWFCounter = 0;
+
+// ...........................................................................................................
+
 std::unordered_map<std::string, std::atomic<int> > current_index; //current+1 for mean
 std::atomic<int> profilingDataReady=0;
 double currentMu;
@@ -1142,11 +1165,14 @@ LOOP_TIME_MEASURE_START
   break;
   case kmp_sch_awf: {
     /* Adaptive Weighted Factoring same as WF but adaptive for time-stepping applications */
+    //set the loop name
+    cLoopName = loc->psource;
+   
     T parm1; // current chunk size
     T parm2 = 0; // current batch index
     DBL dbl_parm1; // factor to be multiplied by chunk
     DBL dbl_parm2; // my weight
-
+    t1 = __kmp_get_ticks2();
     KD_TRACE(100,
              ("__kmp_dispatch_init_algorithm: T#%d kmp_sch_awf case\n", gtid));
 
@@ -1154,15 +1180,55 @@ LOOP_TIME_MEASURE_START
     T N = tc;
     dbl_parm1 = 1.0 / 2.0;
 
-    // init the weight ....check loop record for adaptive weights
-    std::vector<double> weights = __kmp_env_weights;
+    if (std::atomic_fetch_add(&AWFEnter,1) == 0)
+    {
+        // init the weight ....check loop record for adaptive weights
+        if (AWFData.find(cLoopName) == AWFData.end()) //if no data about this loop
+        {
 
-    // don't compare sum to P, user can decide
-    if ((T) weights.size() == P) {
-      dbl_parm2 = weights[tid];
-    } else {
-      dbl_parm2 = 1.0;
-    }
+            std::vector<int> wS(nproc,0);
+            std::vector<int> sWS(nproc, 0);
+            std::vector<double> eT(nproc,0.0);
+            std::vector<double> sET(nproc, 0.0);
+            std::vector<double> w(nproc, 1.0);
+ 
+            //set a new loop record and set autoSearch to 1
+            AWFDataRecord data = 
+            {
+                0, //timeStep
+               wS, //workPerStep
+              sWS, //sumWorkPerStep
+               eT, //excutionTimes
+              sET, //sumExecutionTimes
+                w //weights   
+            }; 
+
+            //create a new record
+            AWFData.insert(std::pair<std::string,AWFDataRecord>(cLoopName, data));
+         }
+        
+         //increment time-step
+         AWFData.at(cLoopName).timeStep++;
+
+         std::atomic_fetch_sub(&AWFWait,1); //allow other threads to continue execution
+
+     }
+     else  //others should wait until we update the selected schedule
+     {
+          while(std::atomic_fetch_sub(&AWFWait,0) == 1)
+          ;
+
+          //printf("tid: %d ...waited \n", tid);
+       
+     }    
+
+
+    // Read thread weight
+    dbl_parm2 = AWFData.at(cLoopName).weights[tid];
+ 
+    //record the starting time for each thread
+    AWFData.at(cLoopName).executionTimes[tid] = __kmp_get_ticks2();
+ 
 
     parm1 = ceil(dbl_parm1 * N / (double)P); // initial chunk size
 
@@ -3363,6 +3429,7 @@ if((int)tid == 0){
     T min_chunk = pr->u.p.parm3; // minimum chunk size
     double factor = pr->u.p.dbl_parm1;
     double weight = pr->u.p.dbl_parm2;
+    
     KD_TRACE(100, ("__kmp_dispatch_next_algorithm: T#%d kmp_sch_awf case\n",
                    gtid));
     trip = pr->u.p.tc;
@@ -3426,12 +3493,68 @@ if((int)tid == 0){
         *p_st = incr;
       *p_lb = start + init * incr;
       *p_ub = start + limit * incr;
+
+     // record chunk for this thread
+    AWFData.at(cLoopName).workPerStep[tid] += *p_ub - *p_lb + 1;
+    //{if (tid == 0)printf("chunksize: %d \n", *p_ub - *p_lb +1);}
+ 
       if (pr->flags.ordered) {
         pr->u.p.ordered_lower = init;
         pr->u.p.ordered_upper = limit;
       } // if
-    } else {
-    printf("[AWF] ...status == 0 ...loop ended?! for thread %d\n", tid);
+    } else 
+    {
+       
+       // record thread finishing time
+       double temp = __kmp_get_ticks2();
+       AWFData.at(cLoopName).executionTimes[tid]  = temp - AWFData.at(cLoopName).executionTimes[tid];
+
+
+
+       //add weighted work done per thread
+       AWFData.at(cLoopName).sumWorkPerStep[tid] += AWFData.at(cLoopName).timeStep * AWFData.at(cLoopName).workPerStep[tid];
+
+       //printf("%d, chunks: %d \n", tid, AWFData.at(cLoopName).workPerStep[tid]);
+
+       // reset work per step
+       AWFData.at(cLoopName).workPerStep[tid] = 0;
+
+
+       //add weighted time per step
+       AWFData.at(cLoopName).sumExecutionTimes[tid] += AWFData.at(cLoopName).timeStep * AWFData.at(cLoopName).executionTimes[tid];
+
+       // last thread to enter
+       int count = std::atomic_fetch_add(&AWFCounter,1);
+       if(count == (nproc - 1))
+       {
+          AWFEnter   = 0; //reset flag
+          AWFWait    = 1; //reset flag
+          AWFCounter = 0; //reset flag
+
+
+          double awap = 0.0;
+
+          for(T i=0; i< nproc; i++)
+          {
+             awap += (AWFData.at(cLoopName).sumExecutionTimes[i] / AWFData.at(cLoopName).sumWorkPerStep[i] ); 
+          } 
+          awap = awap / nproc;
+          //printf("tid: %d, awap = %lf \n ",tid,awap);
+
+          double trw = 0.0;
+          for(T i=0; i< nproc; i++)
+          {
+            trw += awap/ AWFData.at(cLoopName).sumExecutionTimes[i] * AWFData.at(cLoopName).sumWorkPerStep[i] ;
+          }
+
+          for(T i=0; i< nproc; i++)
+          {
+            AWFData.at(cLoopName).weights[i] = awap / AWFData.at(cLoopName).sumExecutionTimes[i] * AWFData.at(cLoopName).sumWorkPerStep[i] * nproc/trw ;
+          //  printf("%d, %lf \n", i, AWFData.at(cLoopName).weights[i]);
+          }
+             
+          //printf("[AWF] status == 0, step %d,  thread %d, weight %lf, time %lf\n", AWFData.at(cLoopName).timeStep,tid, AWFData.at(cLoopName).weights[tid],  AWFData.at(cLoopName).executionTimes[tid]);
+       }
       *p_lb = 0;
       *p_ub = 0;
       if (p_st != nullptr)
