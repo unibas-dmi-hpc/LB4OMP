@@ -3690,11 +3690,11 @@ static const char *__kmp_parse_single_omp_schedule(const char *name,
   // not allow it)
   else if (!__kmp_strcasecmp_with_sentinel("auto", ptr, *delim)) { /* AUTO */
     sched = kmp_sch_auto;
-    if (comma) {
+   /* if (comma) {
       __kmp_msg(kmp_ms_warning, KMP_MSG(IgnoreChunk, name, comma),
                 __kmp_msg_null);
       comma = NULL;
-    }
+    } */
   } else if (!__kmp_strcasecmp_with_sentinel("trapezoidal", ptr,
                                              *delim)) /* TRAPEZOIDAL */
     sched = kmp_sch_trapezoidal;
