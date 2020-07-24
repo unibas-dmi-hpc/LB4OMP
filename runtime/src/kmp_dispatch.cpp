@@ -279,6 +279,39 @@ void init_loop_timer(const char* loopLine, long ub){
 //  -------------------------------------------------------------------------------------------------------//
 
 
+void autoExhaustiveSearch()
+{
+   int currentPortfolioIndex =  autoLoopData.at(autoLoopName).cDLS;
+   unsigned int searchTrials =  autoLoopData.at(autoLoopName).searchTrials;
+
+  if (searchTrials < autoDLSPortfolio.size())
+  {
+    currentPortfolioIndex++; //increment index
+    // if current index is higher than the portfolio size
+    //currentPortfolioIndex = currentPortfolioIndex < autoDLSPortfolio.size()? currentPortfolioIndex: 0.0;
+    currentPortfolioIndex = currentPortfolioIndex % autoDLSPortfolio.size();
+
+    autoLoopData.at(autoLoopName).cDLS = currentPortfolioIndex; // select next DLS technique
+    autoLoopData.at(autoLoopName).searchTrials++; //increment search trials
+  }
+  else //we tested all of the DLS portfolio
+  {
+   //set scheduler to the minimum DLS technique
+    autoLoopData.at(autoLoopName).cDLS = autoLoopData.at(autoLoopName).bestDLS;
+   // set the chunk size for the best DLS
+   autoLoopData.at(autoLoopName).cChunk = autoLoopData.at(autoLoopName).bestChunk;
+   //reset search trial counter
+    autoLoopData.at(autoLoopName).searchTrials = 0;
+   // set auto search of this loop to zero ...we already finshed the search
+   autoLoopData.at(autoLoopName).autoSearch = 0;
+
+   printf("[AUTO] identified best DLS for loop %s to be %d \n", autoLoopName, autoLoopData.at(autoLoopName).bestDLS);
+
+  }
+
+}
+
+
 /*---------------------------------------------- auto_DLS_Search ------------------------------------------*/
 // Search for the best DLS technique within portfolio for a specific loop
 // Sets the best identified DLS technique in autoLoopData[loopName][4]
@@ -293,12 +326,12 @@ void init_loop_timer(const char* loopLine, long ub){
 // Input 
 // N: number of loop iterations
 // P: number of threads
-void auto_DLS_Search(int N, int P) 
+// option: passed as a chunk size with auto ... option can select the auto search method or set minimum chunk sizes for selected DLS techniques
+void auto_DLS_Search(int N, int P, int option) 
 {
    int currentPortfolioIndex =  autoLoopData.at(autoLoopName).cDLS;
-   unsigned int searchTrials =  autoLoopData.at(autoLoopName).searchTrials;
-
-   printf(" LoopName: %s, DLS: %d, time: %lf , LB: %lf \n", autoLoopName, currentPortfolioIndex, autoLoopData.at(autoLoopName).cTime, autoLoopData.at(autoLoopName).cLB);
+   
+   printf(" LoopName: %s, DLS: %d, time: %lf , LB: %lf, chunk: %d \n", autoLoopName, currentPortfolioIndex, autoLoopData.at(autoLoopName).cTime, autoLoopData.at(autoLoopName).cLB, option);
 
 
   // Record the best DLS technique found so far ...
@@ -316,15 +349,23 @@ void auto_DLS_Search(int N, int P)
   }
 
 
+    //Option 1: Exhaustive search  - try all DLS techniques and select the best one
+    if(option == 1)
+    {
+        autoExhaustiveSearch();
+    }
+    else //normal LLVM auto
+    {
+        // set the schedule to the original LLVM auto 
+        autoLoopData.at(autoLoopName).cDLS = GSS_LLVM; 
+        //reset search trial counter
+        autoLoopData.at(autoLoopName).searchTrials = 0;
+        // set auto search of this loop to zero ...we already finshed the search
+        autoLoopData.at(autoLoopName).autoSearch = 0;
+     }
 
-  //Option 1: Exhaustive search  - try all DLS techniques and select the best one
-  if (searchTrials < autoDLSPortfolio.size())
-  {
-    currentPortfolioIndex++; //increment index
-    // if current index is higher than the portfolio size
-    //currentPortfolioIndex = currentPortfolioIndex < autoDLSPortfolio.size()? currentPortfolioIndex: 0.0;
-    currentPortfolioIndex = currentPortfolioIndex % autoDLSPortfolio.size();
-    
+    currentPortfolioIndex = autoLoopData.at(autoLoopName).cDLS;
+
     // Setting chunk size
     if (currentPortfolioIndex == STATIC) // STATIC
     {
@@ -346,24 +387,6 @@ void auto_DLS_Search(int N, int P)
     */
 
 
-    autoLoopData.at(autoLoopName).cDLS = currentPortfolioIndex; // select next DLS technique
-    autoLoopData.at(autoLoopName).searchTrials++; //increment search trials
-  }
-  else //we tested all of the DLS portfolio
-  { 
-   //set scheduler to the minimum DLS technique
-    autoLoopData.at(autoLoopName).cDLS = autoLoopData.at(autoLoopName).bestDLS;
-   // set the chunk size for the best DLS
-   autoLoopData.at(autoLoopName).cChunk = autoLoopData.at(autoLoopName).bestChunk;
-   //reset search trial counter
-    autoLoopData.at(autoLoopName).searchTrials = 0;
-   // set auto search of this loop to zero ...we already finshed the search
-   autoLoopData.at(autoLoopName).autoSearch = 0;
-  
-   printf("[AUTO] identified best DLS for loop %s to be %d \n", autoLoopName, autoLoopData.at(autoLoopName).bestDLS);
-
-  }
-  
 }
 
 
@@ -566,6 +589,8 @@ void __kmp_dispatch_init_algorithm(ident_t *loc, int gtid,
   //------------------------LB4OMP_extensions------------------------
   kmp_info_t *th;
   kmp_team_t *team;
+
+  
 
   LOOP_TIME_MEASURE_START
 
@@ -797,8 +822,9 @@ void __kmp_dispatch_init_algorithm(ident_t *loc, int gtid,
              autoLoopData.insert(std::pair<std::string,LoopData>(loc->psource, data));
           }
           if(autoLoopData.at(autoLoopName).autoSearch == 1) //if autoSearch == 1 
-          {
-             auto_DLS_Search(tc, nproc);
+          { 
+             //printf("chunk size %d \n", chunk);
+             auto_DLS_Search(tc, nproc, chunk);
           }
 
           //printf("tc: %d, tid: %d, nproc: %d \n", tc, tid, nproc);
