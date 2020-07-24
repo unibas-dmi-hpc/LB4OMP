@@ -1190,8 +1190,16 @@ LOOP_TIME_MEASURE_START
             std::vector<int> sWS(nproc, 0);
             std::vector<double> eT(nproc,0.0);
             std::vector<double> sET(nproc, 0.0);
-            std::vector<double> w(nproc, 1.0);
- 
+            std::vector<double> w;
+            //check initial weights
+            if (__kmp_env_weights.size() == nproc)
+            { w =  __kmp_env_weights;}
+            else
+            { 
+               std::vector<double> defaultweights(nproc, 1.0);
+               w = defaultweights;
+            }
+
             //set a new loop record and set autoSearch to 1
             AWFDataRecord data = 
             {
@@ -3532,6 +3540,8 @@ if((int)tid == 0){
           AWFCounter = 0; //reset flag
 
 
+         // printf("[AWF] status == 0, step %d,  thread %d, weight %lf, time %lf\n", AWFData.at(cLoopName).timeStep,tid, AWFData.at(cLoopName).weights[tid],  AWFData.at(cLoopName).executionTimes[tid]);
+
           double awap = 0.0;
 
           for(T i=0; i< nproc; i++)
@@ -3553,7 +3563,7 @@ if((int)tid == 0){
           //  printf("%d, %lf \n", i, AWFData.at(cLoopName).weights[i]);
           }
              
-          //printf("[AWF] status == 0, step %d,  thread %d, weight %lf, time %lf\n", AWFData.at(cLoopName).timeStep,tid, AWFData.at(cLoopName).weights[tid],  AWFData.at(cLoopName).executionTimes[tid]);
+         // printf("[AWF] status == 0, step %d,  thread %d, weight %lf, time %lf\n", AWFData.at(cLoopName).timeStep,tid, AWFData.at(cLoopName).weights[tid],  AWFData.at(cLoopName).executionTimes[tid]);
        }
       *p_lb = 0;
       *p_ub = 0;
