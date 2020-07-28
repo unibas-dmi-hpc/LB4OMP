@@ -242,7 +242,8 @@ enum sched_type __kmp_sch_map[kmp_sched_upper - kmp_sched_lower_ext +
     kmp_sch_awf_e, // ==> kmp_sch_awf_e          = 114
     kmp_sch_af, // ==> kmp_sch_af          = 115
     kmp_sch_af_a, // ==> kmp_sch_af_a          = 116
-    kmp_sch_profiling // ==> kmp_sch_profiling          = 117
+    kmp_sch_profiling, // ==> kmp_sch_profiling          = 117
+    kmp_sch_awf // ==> kmp_sch_awf          = 118
     //--------------LB4OMP_extensions----------------
     // will likely not be used, introduced here just to debug the code
     // of public intel extension schedules
@@ -558,7 +559,7 @@ kmp_target_offload_kind_t __kmp_target_offload = tgt_default;
 
 //----------------------LB4OMP_extensions----------------------
 /* For additional dynamic scheduling techniques */
-int __kmp_env_min = 0; /* minimum chunk size (default = 0/off) */
+//int __kmp_env_min = 0; /* minimum chunk size (default = 0/off) */
 int __kmp_env_mu = 1600; /* mean value of iteration times [micro s] */
 double __kmp_env_sigma = 30; /* sd of iteration times [micro s] */
 int __kmp_env_overhead = 1000; /* scheduling overhead time [micro s] */
