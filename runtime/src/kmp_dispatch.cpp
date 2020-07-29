@@ -56,7 +56,7 @@ std::deque<std::shared_timed_mutex> mutexes;
 /* ------------------------------------------------------------------------ */
 /* ------------------------------------------------------------------------ */
 #define LOOP_TIME_MEASURE_START if (getenv("KMP_TIME_LOOPS") !=NULL) { init_loop_timer(loc->psource, ub); } 
-#define LOOP_TIME_MEASURE_END if (getenv("KMP_TIME_LOOPS") !=NULL) { print_loop_timer(); } 
+#define LOOP_TIME_MEASURE_END if (getenv("KMP_TIME_LOOPS") !=NULL) { print_loop_timer((int) tid); } 
 
 #define INIT_CHUNK_RECORDING if (getenv("KMP_PRINT_CHUNKS") !=NULL) { init_chunk_sizes((int) tc); }
 #define STORE_CHUNK_INFO if (getenv("KMP_PRINT_CHUNKS") !=NULL) { store_chunk_sizes((int) *p_lb, (int) *p_ub, (int) tid); } 
@@ -95,7 +95,9 @@ std::atomic<int> chunkUpdates = 0;
 //std::list<std::string> calculatedChunks;
 int * chunkSizeInfo;
 std::atomic<int> currentChunkIndex=-1;
+
 std::string globalLoopline;
+long globalNIterations;
 
 std::atomic<int> chunkStart = 0;
 
@@ -103,6 +105,10 @@ std::atomic<int> chunkStart = 0;
 double t1;
 double t2;
 double t3;
+
+int countLoops = 0;
+
+std::unordered_map<std::string, std::atomic<int> > currentLoopMap;
 
 // void init_chunk_sizes(int iterations)
 // {
@@ -212,47 +218,73 @@ void init_loop_timer(const char* loopLine, long ub){
 	    		std::cout << "Please export KMP_TIME_LOOPS in your environment with the path for the storing the loop times\n";
 	    		exit(-1);
 	    	}
-	    	std::fstream ofs;
-	    	ofs.open(fileData, std::ofstream::out | std::ofstream::app);
-	 		  ofs << "Location: "<< loopLine << " #iterations "<< (ub+1) <<" ";
+	    	// std::fstream ofs;
+	    	// ofs.open(fileData, std::ofstream::out | std::ofstream::app);
+	 		  // ofs << "Location: "<< loopLine << " #iterations "<< (ub+1) <<" ";
 	 		  globalLoopline = loopLine;
-	  		ofs.close();
+        globalNIterations = ub+1;
+	  		// ofs.close();
 	  		mytime = std::chrono::high_resolution_clock::now();
         timeInit = mytime;
+        // countLoops++;
+        // auto searchLoopLoc = currentLoopMap.find(loopLine);
+        if(currentLoopMap.find(loopLine) == currentLoopMap.end()){
+          currentLoopMap.insert( std::pair<std::string,int>(loopLine, 1));
+        }
+        else{
+          currentLoopMap.at(loopLine)++;
+          // searchLoopLoc->second
+          // searchLoopLoc->second = searchLoopLoc->second+1;
+        }
 	  	}
 }
 
-void print_loop_timer(){
+void print_loop_timer(int tid_for_timer){
 	    std::chrono::high_resolution_clock::time_point mytime;
+      mytime = std::chrono::high_resolution_clock::now();
 	    int count = 0;
+      std::chrono::duration<double> time_span = std::chrono::duration_cast<std::chrono::duration<double>>(mytime - timeInit);
+      char* fileData = std::getenv("KMP_TIME_LOOPS");
+
+      if(fileData==NULL || strcmp(fileData,"")==0){
+        std::cout << "Please export KMP_TIME_LOOPS in your environment with the path for the storing the loop times\n";
+        exit(-1);
+      }
+
+      std::fstream ofs;
+      ofs.open(fileData, std::ofstream::out | std::ofstream::app);
+      ofs << "LoopOccurrence: " << currentLoopMap.at(globalLoopline) << " Location: " << globalLoopline << " #iterations " << globalNIterations << " threadID: " << tid_for_timer << " threadTime: " << time_span.count() << std::endl;
+      ofs.close();  
+
 	    count = std::atomic_fetch_sub(&timeUpdates, 1);
-      // printf("Count finish timer: %d\n", count);
-	    if ( count == 1)
-		{
-			mytime = std::chrono::high_resolution_clock::now();
-			timeEnd = mytime;
-			
-			std::chrono::duration<double> time_span = std::chrono::duration_cast<std::chrono::duration<double>>(timeEnd - timeInit);
-			char* fileData = std::getenv("KMP_TIME_LOOPS");
-	        if(fileData==NULL || strcmp(fileData,"")==0){
-	    		std::cout << "Please export KMP_TIME_LOOPS in your environment with the path for the storing the loop times\n";
-	    		exit(-1);
-	    	}
-	    	std::fstream ofs;
-	    	ofs.open(fileData, std::ofstream::out | std::ofstream::app);
-	        ofs << "LoopTime: " << time_span.count() << std::endl;
-	        if(currentChunkIndex != -1 && chunkSizeInfo != NULL){
-				    for(int i = 0 ; i < currentChunkIndex ; i += 4){
-					       ofs << "chunkLocation: " << globalLoopline << " lower " << chunkSizeInfo[i] << " upper " << chunkSizeInfo[i+1] <<  " chunksize " << chunkSizeInfo[i+2] << " tid " << chunkSizeInfo[i+3]<< std::endl;
-				      }
-	        	currentChunkIndex = -1;
-            chunkUpdates = 0;
-            chunkStart = 0;
-	        	free(chunkSizeInfo);
-	        	
-	    	}
-	        ofs.close();	
-    	}     
+	    
+      if ( count == 1){
+		  //mytime = std::chrono::high_resolution_clock::now();
+  			timeEnd = mytime;
+  			std::chrono::duration<double> time_span = std::chrono::duration_cast<std::chrono::duration<double>>(timeEnd - timeInit);
+  			char* fileData = std::getenv("KMP_TIME_LOOPS");
+
+          if(fileData==NULL || strcmp(fileData,"")==0){
+    	    		std::cout << "Please export KMP_TIME_LOOPS in your environment with the path for the storing the loop times\n";
+    	    		exit(-1);
+    	    }
+
+  	    	ofs.open(fileData, std::ofstream::out | std::ofstream::app);
+  	      ofs << "Location: "<< globalLoopline << " #iterations "<< globalNIterations << " LoopTime: " << time_span.count() << std::endl;
+
+  	      if(currentChunkIndex != -1 && chunkSizeInfo != NULL){
+  				    for(int i = 0 ; i < currentChunkIndex ; i += 4){
+  					      ofs << "chunkLocation: " << globalLoopline << " lower " << chunkSizeInfo[i] << " upper " << chunkSizeInfo[i+1] <<  " chunksize " << chunkSizeInfo[i+2] << " tid " << chunkSizeInfo[i+3]<< std::endl;
+  				}
+
+        	currentChunkIndex = -1;
+          chunkUpdates = 0;
+          chunkStart = 0;
+        	free(chunkSizeInfo);
+  	        	
+  	    	}
+  	        ofs.close();	
+      }     
 }
 
 
