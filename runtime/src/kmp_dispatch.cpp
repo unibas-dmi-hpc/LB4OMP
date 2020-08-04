@@ -73,7 +73,7 @@ std::chrono::high_resolution_clock::time_point timeEnd;
 
 // ---------------------------------------- Auto extension variables --------------------
 
-int AUTO_FLAG = 0;
+volatile int AUTO_FLAG = 0;
 volatile double autoTimerInit;
 volatile double autoTimerEnd;  
 double autoLBMeanMax; 
@@ -116,20 +116,20 @@ std::vector<sched_type> autoDLSPortfolio{
   //kmp_sch_tap,  // requires profiling 
   //kmp_sch_fac,  // requires profiling
   //kmp_sch_faca, // requires profiling
-  kmp_sch_fac2,                    //  ... 4
-  kmp_sch_fac2a,                   //  ... 5
+  kmp_sch_fac2a,                    //  ... 4
+  kmp_sch_fac2,                   //  ... 5
   kmp_sch_wf,                      //  ... 6 
   //kmp_sch_bold,  // requires profiling
   kmp_sch_awf_b,                  //   ... 7
   kmp_sch_awf_c,                  //   ... 8
   kmp_sch_awf_d,                  //   ... 9
   kmp_sch_awf_e,                  //   ... 10
-  kmp_sch_af,                     //   ... 11
-  kmp_sch_af_a,                   //   ... 12
+  kmp_sch_af_a,                     //   ... 11
+  kmp_sch_af,                   //   ... 12
   kmp_sch_dynamic_chunked //           ... 13   SS  
   }; 
 
-enum DLSPortfolio {STATIC, TSS, GSS_LLVM, GSS, FAC2, mFAC2, WF, AWFB, AWFC, AWFD, AWFE, AF, mAF, SS};
+enum DLSPortfolio {STATIC, TSS, GSS_LLVM, GSS, mFAC2, FAC2, WF, AWFB, AWFC, AWFD, AWFE, mAF, AF, SS};
 
 
 // ------------------------------------------ end Auto extension variables -------------------- 
@@ -284,6 +284,22 @@ void autoExhaustiveSearch()
    int currentPortfolioIndex =  autoLoopData.at(autoLoopName).cDLS;
    unsigned int searchTrials =  autoLoopData.at(autoLoopName).searchTrials;
 
+
+  // Record the best DLS technique found so far ...
+  //if current time < min time OR min time == -1 i.e. no identified min yet
+  if((autoLoopData.at(autoLoopName).cTime < autoLoopData.at(autoLoopName).bestTime) || (autoLoopData.at(autoLoopName).bestTime == -1.0))
+  {
+    //best DLS = current DLS
+    autoLoopData.at(autoLoopName).bestDLS = currentPortfolioIndex;
+    //best time = current time 
+    autoLoopData.at(autoLoopName).bestTime = autoLoopData.at(autoLoopName).cTime;
+    //best LB = current LB
+    autoLoopData.at(autoLoopName).bestLB = autoLoopData.at(autoLoopName).cLB;
+    // best chunk = current chunk
+    autoLoopData.at(autoLoopName).bestChunk = autoLoopData.at(autoLoopName).cChunk;
+  }
+
+
   if (searchTrials < autoDLSPortfolio.size())
   {
     currentPortfolioIndex++; //increment index
@@ -311,6 +327,59 @@ void autoExhaustiveSearch()
 
 }
 
+/*Search the most suitable DLS technique ...taking into account the DLS technqiues order according to their scheduling 
+ * overhead and their load balancing ability ...
+ * 
+ * DLS techniques order
+ * STATIC, TSS, GSS_LLVM, GSS, mFAC2, FAC2, WF, AWFB, AWFC, AWFD, AWFE, mAF, AF, SS*/
+
+void autoBinarySearch()
+{
+
+   int currentPortfolioIndex =  autoLoopData.at(autoLoopName).cDLS;
+   unsigned int searchTrials =  autoLoopData.at(autoLoopName).searchTrials;
+   int step; // how much we move right or left
+
+   //increment search trials
+   autoLoopData.at(autoLoopName).searchTrials++;
+
+   step = autoDLSPortfolio.size()/(1<<autoLoopData.at(autoLoopName).searchTrials);
+
+   printf("current LB: %lf , previous LB: %lf, step: %d\n", autoLoopData.at(autoLoopName).cLB, autoLoopData.at(autoLoopName).bestLB, step);
+  
+   //if step == 0 ...stop
+   if(step == 0)
+   {     
+      //reset search trial counter
+      autoLoopData.at(autoLoopName).searchTrials = 0;
+      // set auto search of this loop to zero ...we already finshed the search
+      autoLoopData.at(autoLoopName).autoSearch = 0;
+      printf("[AUTO] identified best DLS for loop %s to be %d \n", autoLoopName, autoLoopData.at(autoLoopName).cDLS); 
+   }
+   //if load imbalance is high ... go right, i.e. current LB metric is lower than previous LB metric
+   else if((autoLoopData.at(autoLoopName).cLB < autoLoopData.at(autoLoopName).bestLB) || (searchTrials == 0))
+   {
+      //go right
+      autoLoopData.at(autoLoopName).cDLS += step;
+      printf("going right \n");
+   }
+   //if load imbalance is low  ... go left
+   else
+   {
+     // go left
+     autoLoopData.at(autoLoopName).cDLS -= step;
+     printf("go left \n");
+   }
+
+
+   // swap current and previous data
+   autoLoopData.at(autoLoopName).bestLB    = autoLoopData.at(autoLoopName).cLB;
+   autoLoopData.at(autoLoopName).bestDLS   = currentPortfolioIndex;
+   autoLoopData.at(autoLoopName).bestChunk = autoLoopData.at(autoLoopName).cChunk;
+}
+
+
+
 
 /*---------------------------------------------- auto_DLS_Search ------------------------------------------*/
 // Search for the best DLS technique within portfolio for a specific loop
@@ -334,34 +403,25 @@ void auto_DLS_Search(int N, int P, int option)
    printf(" LoopName: %s, DLS: %d, time: %lf , LB: %lf, chunk: %d \n", autoLoopName, currentPortfolioIndex, autoLoopData.at(autoLoopName).cTime, autoLoopData.at(autoLoopName).cLB, option);
 
 
-  // Record the best DLS technique found so far ...
-  //if current time < min time OR min time == -1 i.e. no identified min yet
-  if((autoLoopData.at(autoLoopName).cTime < autoLoopData.at(autoLoopName).bestTime) || (autoLoopData.at(autoLoopName).bestTime == -1.0))
-  {
-    //best DLS = current DLS
-    autoLoopData.at(autoLoopName).bestDLS = currentPortfolioIndex;
-    //best time = current time 
-    autoLoopData.at(autoLoopName).bestTime = autoLoopData.at(autoLoopName).cTime;
-    //best LB = current LB
-    autoLoopData.at(autoLoopName).bestLB = autoLoopData.at(autoLoopName).cLB;
-    // best chunk = current chunk
-    autoLoopData.at(autoLoopName).bestChunk = autoLoopData.at(autoLoopName).cChunk;
-  }
-
-
     //Option 1: Exhaustive search  - try all DLS techniques and select the best one
     if(option == 1)
     {
         autoExhaustiveSearch();
     }
+    if(option == 2)
+    {
+        autoBinarySearch();
+    }
     else //normal LLVM auto
     {
+        //turn off our custom auto
+        AUTO_FLAG = 0;
         // set the schedule to the original LLVM auto 
         autoLoopData.at(autoLoopName).cDLS = GSS_LLVM; 
         //reset search trial counter
         autoLoopData.at(autoLoopName).searchTrials = 0;
-        // set auto search of this loop to zero ...we already finshed the search
-        autoLoopData.at(autoLoopName).autoSearch = 0;
+        // set auto search of this loop to one to always turn off AUTO_FLAG
+        autoLoopData.at(autoLoopName).autoSearch = 1;
      }
 
     currentPortfolioIndex = autoLoopData.at(autoLoopName).cDLS;
