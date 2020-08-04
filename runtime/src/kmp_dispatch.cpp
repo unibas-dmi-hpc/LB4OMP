@@ -338,14 +338,16 @@ void autoBinarySearch()
 
    int currentPortfolioIndex =  autoLoopData.at(autoLoopName).cDLS;
    unsigned int searchTrials =  autoLoopData.at(autoLoopName).searchTrials;
+   int DLSProtfolioSize = autoDLSPortfolio.size();
+
    int step; // how much we move right or left
 
    //increment search trials
    autoLoopData.at(autoLoopName).searchTrials++;
 
-   step = autoDLSPortfolio.size()/(1<<autoLoopData.at(autoLoopName).searchTrials);
+   step = DLSProtfolioSize/(1<<autoLoopData.at(autoLoopName).searchTrials);
 
-   printf("current LB: %lf , previous LB: %lf, step: %d\n", autoLoopData.at(autoLoopName).cLB, autoLoopData.at(autoLoopName).bestLB, step);
+   //printf("current LB: %lf , previous LB: %lf, step: %d\n", autoLoopData.at(autoLoopName).cLB, autoLoopData.at(autoLoopName).bestLB, step);
   
    //if step == 0 ...stop
    if(step == 0)
@@ -361,16 +363,25 @@ void autoBinarySearch()
    {
       //go right
       autoLoopData.at(autoLoopName).cDLS += step;
-      printf("going right \n");
+      //printf("going right \n");
    }
    //if load imbalance is low  ... go left
    else
    {
      // go left
      autoLoopData.at(autoLoopName).cDLS -= step;
-     printf("go left \n");
+     //printf("go left \n");
    }
 
+   //adjust the output schedule to be within range
+   if ( autoLoopData.at(autoLoopName).cDLS > (DLSProtfolioSize - 1))
+   {
+      autoLoopData.at(autoLoopName).cDLS = DLSProtfolioSize - 1;
+   }
+   else if( autoLoopData.at(autoLoopName).cDLS < 0)
+   {
+      autoLoopData.at(autoLoopName).cDLS = 0;
+   }
 
    // swap current and previous data
    autoLoopData.at(autoLoopName).bestLB    = autoLoopData.at(autoLoopName).cLB;
