@@ -284,7 +284,7 @@ void autoExhaustiveSearch()
    int currentPortfolioIndex =  autoLoopData.at(autoLoopName).cDLS;
    unsigned int searchTrials =  autoLoopData.at(autoLoopName).searchTrials;
 
-
+ 
   // Record the best DLS technique found so far ...
   //if current time < min time OR min time == -1 i.e. no identified min yet
   if((autoLoopData.at(autoLoopName).cTime < autoLoopData.at(autoLoopName).bestTime) || (autoLoopData.at(autoLoopName).bestTime == -1.0))
@@ -302,7 +302,9 @@ void autoExhaustiveSearch()
 
   if (searchTrials < autoDLSPortfolio.size())
   {
-    currentPortfolioIndex++; //increment index
+
+     
+     currentPortfolioIndex++; //increment index
     // if current index is higher than the portfolio size
     //currentPortfolioIndex = currentPortfolioIndex < autoDLSPortfolio.size()? currentPortfolioIndex: 0.0;
     currentPortfolioIndex = currentPortfolioIndex % autoDLSPortfolio.size();
@@ -390,7 +392,41 @@ void autoBinarySearch()
 }
 
 
+void autoRandomSearch()
+{
 
+      double currentLoadImbalance =  autoLoopData.at(autoLoopName).cLB;
+      double jumpProbability = 1 - currentLoadImbalance ;
+      
+      double randomNum;
+   
+      // if first time to enter this function
+      if(autoLoopData.at(autoLoopName).searchTrials == 0)
+      {
+          srand(currentLoadImbalance); 
+      }
+
+      // random number between 0 and 1
+      randomNum = (double) rand()/ (double) RAND_MAX;
+      
+      //printf("jumpProbability %lf, randomNum %lf \n", jumpProbability, randomNum);
+
+      if (jumpProbability > randomNum) // probability to select another DLS is higher than a random number
+      {
+        // save previous data
+        autoLoopData.at(autoLoopName).bestLB    = autoLoopData.at(autoLoopName).cLB;
+        autoLoopData.at(autoLoopName).bestDLS   = autoLoopData.at(autoLoopName).cDLS; 
+        autoLoopData.at(autoLoopName).bestChunk = autoLoopData.at(autoLoopName).cChunk;
+
+        // select another DLS randomly
+        autoLoopData.at(autoLoopName).cDLS = rand()% autoDLSPortfolio.size();
+
+       printf("[Auto] Randomly selected %d \n", autoLoopData.at(autoLoopName).cDLS);
+
+      }
+
+      autoLoopData.at(autoLoopName).searchTrials++;
+}
 
 /*---------------------------------------------- auto_DLS_Search ------------------------------------------*/
 // Search for the best DLS technique within portfolio for a specific loop
@@ -419,9 +455,13 @@ void auto_DLS_Search(int N, int P, int option)
     {
         autoExhaustiveSearch();
     }
-    if(option == 2)
+    else if(option == 2)
     {
         autoBinarySearch();
+    }
+    else if(option == 4)
+    {
+        autoRandomSearch();
     }
     else //normal LLVM auto
     {
