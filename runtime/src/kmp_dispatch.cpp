@@ -76,7 +76,7 @@ std::chrono::high_resolution_clock::time_point timeEnd;
 volatile int AUTO_FLAG = 0;
 volatile double autoTimerInit;
 volatile double autoTimerEnd;  
-double autoLBMeanMax; 
+double autoLBPercentIm; 
 std::atomic<int> autoMeanThreadTime = -1; 
 std::atomic<int> autoTimerFirstEntry = 0; 
 std::atomic<int> autoThreadCount = 0;  
@@ -111,25 +111,26 @@ std::vector<sched_type> autoDLSPortfolio{
   kmp_sch_trapezoidal, // TSS          ... 1
   kmp_sch_guided_analytical_chunked,// ... 2 LLVM RTL original auto, which is guided with minimum chunk size
   __kmp_guided, //                     ... 3 GSS
+  kmp_sch_static_steal,             // ... 4 static_steal
   //--------------LB4OMP_extensions----------
   //kmp_sch_fsc,  // requires profiling
   //kmp_sch_tap,  // requires profiling 
   //kmp_sch_fac,  // requires profiling
   //kmp_sch_faca, // requires profiling
-  kmp_sch_fac2a,                    //  ... 4
-  kmp_sch_fac2,                   //  ... 5
-  kmp_sch_wf,                      //  ... 6 
+  kmp_sch_fac2a,                      //  ... 5
+  kmp_sch_fac2,                       //  ... 6
+  kmp_sch_wf,                         //  ... 7 
   //kmp_sch_bold,  // requires profiling
-  kmp_sch_awf_b,                  //   ... 7
-  kmp_sch_awf_c,                  //   ... 8
-  kmp_sch_awf_d,                  //   ... 9
-  kmp_sch_awf_e,                  //   ... 10
-  kmp_sch_af_a,                     //   ... 11
-  kmp_sch_af,                   //   ... 12
-  kmp_sch_dynamic_chunked //           ... 13   SS  
+  kmp_sch_awf_b,                      //  ... 8
+  kmp_sch_awf_c,                     //   ... 9
+  kmp_sch_awf_d,                    //   ... 10
+  kmp_sch_awf_e,                   //    ... 11
+  kmp_sch_af_a,                   //     ... 12
+  kmp_sch_af,                    //      ... 13
+  kmp_sch_dynamic_chunked       //       ... 14   SS  
   }; 
 
-enum DLSPortfolio {STATIC, TSS, GSS_LLVM, GSS, mFAC2, FAC2, WF, AWFB, AWFC, AWFD, AWFE, mAF, AF, SS};
+enum DLSPortfolio {STATIC, TSS, GSS_LLVM, GSS, static_steal, mFAC2, FAC2, WF, AWFB, AWFC, AWFD, AWFE, mAF, AF, SS};
 
 
 // ------------------------------------------ end Auto extension variables -------------------- 
@@ -344,13 +345,16 @@ void autoBinarySearch()
 
    int step; // how much we move right or left
 
-   //increment search trials
-   autoLoopData.at(autoLoopName).searchTrials++;
-
    step = DLSProtfolioSize/(1<<autoLoopData.at(autoLoopName).searchTrials);
 
    //printf("current LB: %lf , previous LB: %lf, step: %d\n", autoLoopData.at(autoLoopName).cLB, autoLoopData.at(autoLoopName).bestLB, step);
   
+   // if there is no previous LB metric ... previous LB = current LB
+   if (autoLoopData.at(autoLoopName).bestLB == -1)
+   {
+	autoLoopData.at(autoLoopName).bestLB = autoLoopData.at(autoLoopName).cLB;
+   }
+
    //if step == 0 ...stop
    if(step == 0)
    {     
@@ -360,15 +364,15 @@ void autoBinarySearch()
       autoLoopData.at(autoLoopName).autoSearch = 0;
       printf("[AUTO] identified best DLS for loop %s to be %d \n", autoLoopName, autoLoopData.at(autoLoopName).cDLS); 
    }
-   //if load imbalance is high ... go right, i.e. current LB metric is lower than previous LB metric
-   else if((autoLoopData.at(autoLoopName).cLB < autoLoopData.at(autoLoopName).bestLB) || (searchTrials == 0))
+   //if load imbalance increased ... go right, i.e. current LB metric is higher than previous LB metric
+   else if((autoLoopData.at(autoLoopName).cLB > autoLoopData.at(autoLoopName).bestLB) || (searchTrials == 0))
    {
       //go right
       autoLoopData.at(autoLoopName).cDLS += step;
       //printf("going right \n");
    }
    //if load imbalance is low  ... go left
-   else
+   else 
    {
      // go left
      autoLoopData.at(autoLoopName).cDLS -= step;
@@ -385,6 +389,10 @@ void autoBinarySearch()
       autoLoopData.at(autoLoopName).cDLS = 0;
    }
 
+   
+   //increment search trials
+   autoLoopData.at(autoLoopName).searchTrials++;
+
    // swap current and previous data
    autoLoopData.at(autoLoopName).bestLB    = autoLoopData.at(autoLoopName).cLB;
    autoLoopData.at(autoLoopName).bestDLS   = currentPortfolioIndex;
@@ -395,7 +403,7 @@ void autoBinarySearch()
 void autoRandomSearch()
 {
 
-      double currentLoadImbalance =  autoLoopData.at(autoLoopName).cLB;
+      double currentLoadImbalance =  autoLoopData.at(autoLoopName).cLB/100;
       double jumpProbability = 1 - currentLoadImbalance ;
       
       double randomNum;
@@ -428,6 +436,228 @@ void autoRandomSearch()
       autoLoopData.at(autoLoopName).searchTrials++;
 }
 
+
+
+
+// Membership functions for ΔLB
+//
+//
+//     ____      ________    ____^____    ________      _______
+//         \    /        \  /  1 |    \  /        \    /
+//          \  /          \/     |     \/          \  /
+//           \/            \     |     /            \/
+// MuchImproved           / \    |    /\            /\
+//          /  \Improved /   \ NoChange \  Degraded/  \  MuchDegraded
+//         /    \       /     \  |  /    \        /    \
+//        /      \     /       \ | /      \      /      \
+//  <----------------------------|------------------------------>
+//      -10    -7.5     -2.5     0       2.5   7.5        10        (%)
+
+
+double DlbISMuchImproved(double deltaLB)
+{
+
+     if (deltaLB < -10)
+     {
+        return 1.0;
+     }
+     else if ((deltaLB >= -10) && (deltaLB < 7.5))
+     {
+         return -0.4*deltaLB - 3; 
+     }
+     else
+     {
+        return 0.0;
+     }
+
+}
+
+double DlbISMuchDegraded(double deltaLB)
+{
+
+     if (deltaLB > 10)
+     {
+        return 1.0;
+     }
+     else if ((deltaLB <= 10) && (deltaLB > 7.5))
+     {
+         return 0.4*deltaLB - 3;
+     }
+     else
+     {
+        return 0.0;
+     }
+
+}
+
+
+double DlbISDegraded(double deltaLB)
+{
+
+     if ((deltaLB > 10) || (deltaLB < 0) )
+     {
+        return 0;
+     }
+     else if ((deltaLB <= 10) && (deltaLB >= 7.5))
+     {
+         return -0.4*deltaLB + 4;
+     }
+     else if ((deltaLB <= 7.5) && ( deltaLB >= 2.5))
+     {
+        return 1;
+     }
+     else if (deltaLB < 2.5)
+     {
+        return 0.4*deltaLB;
+     }
+
+}
+
+
+double DlbISImproved(double deltaLB)
+{
+
+     if ((deltaLB < -10) || (deltaLB > 0) )
+     {
+        return 0;
+     }
+     else if ((deltaLB >= -10) && (deltaLB <= -7.5))
+     {
+         return 0.4*deltaLB + 4;
+     }
+     else if ((deltaLB >= -7.5) && ( deltaLB <= -2.5))
+     {
+        return 1;
+     }
+     else if (deltaLB > -2.5)
+     {
+        return -0.4*deltaLB;
+     }
+
+}
+
+
+double DlbISNoChange(double deltaLB)
+{
+
+     if ((deltaLB < -2.5) || (deltaLB > 2.5) )
+     {
+        return 0;
+     }
+     else if ((deltaLB >= -2.5) && (deltaLB <= 1.25))
+     {
+         return 0.8*deltaLB + 2;
+     }
+     else if ((deltaLB >= -1.25) && ( deltaLB <= 1.25))
+     {
+        return 1;
+     }
+     else if (deltaLB > 1.25)
+     {
+        return -0.8*deltaLB + 2;
+     }
+}
+
+void autoFuzzySearch()
+{
+
+/* Step 1  ..... Fuzzification .... */
+
+// We have two inputs ...1) Tpar and 2) LB metric 
+// But we can measure also the change in these two inputs, i.e. ΔTpar and ΔLB
+// Therefore we need four membership functions, for 
+// 1. Tpar
+// 2. LB 
+// 3. ΔTpar
+// 4. ΔLB 
+
+
+// Tpar
+//    
+//    ^____           ______       _____
+// 1  |    \         /      \     /
+//    |     \       /        \   /
+//    |      \     /          \ /
+//    |       \   /            /
+//    |Short   \ /   Medium   / \  Long
+//    |         /            /   \
+//    |        / \          /     \
+//  0 |------------------------------>
+//    0     0.07 0.1        1     10
+
+
+
+// LB
+//    
+//    ^____           ______       _____
+// 1  |    \         /      \     /
+//    |     \       /        \   /
+//    |      \     /          \ /
+//    |       \   /            /
+//    |Low     \ /   Medium   / \  High
+//    |         /            /   \
+//    |        / \          /     \
+//  0 |------------------------------>
+//    0     10   15        40     50 (%)
+
+
+
+// ΔTpar
+//
+//
+//  ____      ______         ____^____         ______       _____
+//      \    /      \       /  1 |    \       /      \     /
+//       \  /        \     /     |     \     /        \   /
+//        \/          \   /      |      \   /          \ /
+// MuchImproved        \ /       |       \ /            /
+//       /  \ Improved  /     NoChange    /  Degraded  / \  MuchDegraded
+//      /    \         / \       |       / \          /   \
+//     /      \       /   \      |      /   \        /     \
+//  <----------------------------|------------------------------>
+//   -15      -10    -5    -3     0     3     5     10      15   (%)
+
+
+double deltaTime = (autoLoopData.at(autoLoopName).cTime - autoLoopData.at(autoLoopName).bestTime)/autoLoopData.at(autoLoopName).cTime*100;
+
+
+
+// ΔLB
+//
+//
+//  ____      ______         ____^____         ______       _____
+//      \    /      \       /  1 |    \       /      \     /
+//       \  /        \     /     |     \     /        \   /
+//        \/          \   /      |      \   /          \ /
+// MuchImproved        \ /       |       \ /            /
+//       /  \ Improved  /     NoChange    /  Degraded  / \  MuchDegraded
+//      /    \         / \       |       / \          /   \
+//     /      \       /   \      |      /   \        /     \
+//  <----------------------------|------------------------------>
+//   -15      -10    -5    -3     0     3     5     10      15   (%)
+
+
+double deltaLB = autoLoopData.at(autoLoopName).cLB - autoLoopData.at(autoLoopName).bestLB;
+
+
+#define deltaLBisMuchImproved(deltaLB) if
+
+
+
+// Step 2 ... Rules 
+
+
+
+
+
+// Step 3 ..... Defuzzification
+
+
+
+
+}
+
+
+
 /*---------------------------------------------- auto_DLS_Search ------------------------------------------*/
 // Search for the best DLS technique within portfolio for a specific loop
 // Sets the best identified DLS technique in autoLoopData[loopName][4]
@@ -459,9 +689,13 @@ void auto_DLS_Search(int N, int P, int option)
     {
         autoBinarySearch();
     }
-    else if(option == 4)
+    else if(option == 3)
     {
         autoRandomSearch();
+    }
+    else if (option == 4)
+    {
+        autoFuzzySearch();
     }
     else //normal LLVM auto
     {
@@ -566,11 +800,13 @@ void end_auto_loop_timer(int nproc, int tid)
                 
                
 		autoTimerEnd = time[tid]; //Last thread to finish, i.e. Loop finishing time in ms
-                // calculate LB by mean/max
+                // calculate LB by percent imbalance ...max-mean/max * P/P-1 *100%
                 autoMeanThreadTime = localmean/localNProc; //mean thread execution time
 
-                autoLBMeanMax =  autoMeanThreadTime /   autoTimerEnd; //mean/max
-		//printf(" time: %lf ,  mean: %d, P: %d, LB: %lf \n", autoTimerEnd, autoMeanThreadTime, localNProc, autoLBMeanMax);
+                autoLBPercentIm =  (autoTimerEnd - autoMeanThreadTime ) / autoTimerEnd; //first term
+
+                autoLBPercentIm *= (nproc/(nproc-1))*100; // 2nd term 
+		//printf(" time: %lf ,  mean: %d, P: %d, LB: %lf \n", autoTimerEnd, autoMeanThreadTime, localNProc, autoLBPercentIm);
                 
                 autoThreadCount = 0; // init thread count
                 autoMeanThreadTime = 0; // init mean
@@ -583,16 +819,19 @@ void end_auto_loop_timer(int nproc, int tid)
                 autoLoopData.at(autoLoopName).cTime = autoTimerEnd; // update execution time
                  
                 // check if load imbalance is increased from previous time ...also time
-                if (autoLBMeanMax < (autoLoopData.at(autoLoopName).cLB - 0.01 ) ) // if load imbalance increased with margin
+                if (autoLBPercentIm > (autoLoopData.at(autoLoopName).cLB + 1 ) ) // if load imbalance increased with margin
                 {
                 // set autoSearch to 1
-                printf("[%s] load imbalance increased from %lf to %lf \n Setting autoSearch to 1 ...\n",autoLoopName,autoLoopData.at(autoLoopName).cLB, autoLBMeanMax );
+                printf("[%s] load imbalance increased from %lf to %lf ... Setting autoSearch to 1 ...\n",autoLoopName,autoLoopData.at(autoLoopName).cLB, autoLBPercentIm);
                 autoLoopData.at(autoLoopName).autoSearch = 1;
                 }
-                autoLoopData.at(autoLoopName).cLB = autoLBMeanMax; // update LB
+                autoLoopData.at(autoLoopName).cLB = autoLBPercentIm; // update LB
 
     	    }
 }
+
+
+// ------------------------------------------ End of Auto Extension ------------------------------------
 
 void print_loop_timer(){
 	    std::chrono::high_resolution_clock::time_point mytime;
