@@ -332,9 +332,10 @@ void autoExhaustiveSearch()
 
 /*Search the most suitable DLS technique ...taking into account the DLS technqiues order according to their scheduling 
  * overhead and their load balancing ability ...
- * 
+ *
+ GOAL: achive the best possible LB with minimum overhead  
  * DLS techniques order
- * STATIC, TSS, GSS_LLVM, GSS, mFAC2, FAC2, WF, AWFB, AWFC, AWFD, AWFE, mAF, AF, SS*/
+ * STATIC, TSS, GSS_LLVM, GSS, static_steal, mFAC2, FAC2, WF, AWFB, AWFC, AWFD, AWFE, mAF, AF, SS */
 
 void autoBinarySearch()
 {
@@ -502,7 +503,7 @@ double DlbISDegraded(double deltaLB)
      {
          return -0.4*deltaLB + 4;
      }
-     else if ((deltaLB <= 7.5) && ( deltaLB >= 2.5))
+     else if ((deltaLB <= 7.5) && (deltaLB >= 2.5))
      {
         return 1;
      }
@@ -525,7 +526,7 @@ double DlbISImproved(double deltaLB)
      {
          return 0.4*deltaLB + 4;
      }
-     else if ((deltaLB >= -7.5) && ( deltaLB <= -2.5))
+     else if ((deltaLB >= -7.5) && (deltaLB <= -2.5))
      {
         return 1;
      }
@@ -548,7 +549,7 @@ double DlbISNoChange(double deltaLB)
      {
          return 0.8*deltaLB + 2;
      }
-     else if ((deltaLB >= -1.25) && ( deltaLB <= 1.25))
+     else if ((deltaLB >= -1.25) && (deltaLB <= 1.25))
      {
         return 1;
      }
@@ -558,18 +559,125 @@ double DlbISNoChange(double deltaLB)
      }
 }
 
-void autoFuzzySearch()
+
+// Membership functions for ΔTpar
+//
+//
+//     ____      ________    ____^____    ________      _______
+//         \    /        \  /  1 |    \  /        \    /
+//          \  /          \/     |     \/          \  /
+//           \/            \     |     /            \/
+// MuchImproved           / \    |    /\            /\
+//          /  \Improved /   \ NoChange \  Degraded/  \  MuchDegraded
+//         /    \       /     \  |  /    \        /    \
+//        /      \     /       \ | /      \      /      \
+//  <----------------------------|------------------------------>
+//      -10    -7.5     -2.5     0       2.5   7.5        10        (%)
+
+
+
+double DTparISMuchImproved(double DTpar)
 {
 
-/* Step 1  ..... Fuzzification .... */
+     if (DTpar < -10)
+     {
+        return 1.0;
+     }
+     else if ((DTpar >= -10) && (DTpar < 7.5))
+     {
+         return -0.4*DTpar - 3;
+     }
+     else
+     {
+        return 0.0;
+     }
 
-// We have two inputs ...1) Tpar and 2) LB metric 
-// But we can measure also the change in these two inputs, i.e. ΔTpar and ΔLB
-// Therefore we need four membership functions, for 
-// 1. Tpar
-// 2. LB 
-// 3. ΔTpar
-// 4. ΔLB 
+}
+
+double DTparISMuchDegraded(double DTpar)
+{
+
+     if (DTpar > 10)
+     {
+        return 1.0;
+     }
+     else if ((DTpar <= 10) && (DTpar > 7.5))
+     {
+         return 0.4*DTpar - 3;
+     }
+     else
+     {
+        return 0.0;
+     }
+
+}
+
+double DTparISNoChange(double DTpar)
+{
+
+     if ((DTpar < -2.5) || (DTpar > 2.5) )
+     {
+        return 0;
+     }
+     else if ((DTpar >= -2.5) && (DTpar <= 1.25))
+     {
+         return 0.8*DTpar + 2;
+     }
+     else if ((DTpar >= -1.25) && (DTpar <= 1.25))
+     {
+        return 1;
+     }
+     else if (DTpar > 1.25)
+     {
+        return -0.8*DTpar + 2;
+     }
+}
+
+double DTparISDegraded(double DTpar)
+{
+
+     if ((DTpar > 10) || (DTpar < 0) )
+     {
+        return 0;
+     }
+     else if ((DTpar <= 10) && (DTpar >= 7.5))
+     {
+         return -0.4*DTpar + 4;
+     }
+     else if ((DTpar <= 7.5) && (DTpar >= 2.5))
+     {
+        return 1;
+     }
+     else if (DTpar < 2.5)
+     {
+        return 0.4*DTpar;
+     }
+
+}
+
+
+double DTparISImproved(double DTpar)
+{
+
+     if ((DTpar < -10) || (DTpar > 0) )
+     {
+        return 0;
+     }
+     else if ((DTpar >= -10) && (DTpar <= -7.5))
+     {
+         return 0.4*DTpar + 4;
+     }
+     else if ((DTpar >= -7.5) && (DTpar <= -2.5))
+     {
+        return 1;
+     }
+     else if (DTpar > -2.5)
+     {
+        return -0.4*DTpar;
+     }
+
+}
+
 
 
 // Tpar
@@ -586,6 +694,63 @@ void autoFuzzySearch()
 //    0     0.07 0.1        1     10
 
 
+double TparISLong(double Tpar)
+{
+   if(Tpar <= 1)
+   {
+     return 0;
+   }
+   else if(Tpar >= 10)
+   {
+     return 1;
+   }
+   else // Tpar > 1 and Tpar < 10
+   {
+     return 0.11*Tpar-0.11;
+   }
+}
+
+
+double TparISMedium(double Tpar)
+{
+
+   if((Tpar < 0.07) || (Tpar > 10))
+   {
+     return 0;
+   }
+   else if((Tpar => 0.07) && (Tpar < 0.1))
+   {
+      return 33*Tpar - 2.31; 
+   }
+   else if ((Tpar >= 0.1) && (Tpar <= 1.0))
+   {
+      return 1;
+   }
+   else if ((Tpar > 1) && (Tpar < 10))
+   {
+      return -0.11*Tpar + 1.11;
+   }
+
+}
+
+
+double TparISShort(double Tpar)
+{
+
+   if(Tpar <= 0.07)
+   {
+     return 1;
+   }
+   else if( Tpar >= 0.1)
+   {
+     return 0;
+   }
+   else // between 0.07 and 0.1
+   {
+     return -33*Tpar + 3.3;
+   }
+
+}
 
 // LB
 //    
@@ -594,60 +759,151 @@ void autoFuzzySearch()
 //    |     \       /        \   /
 //    |      \     /          \ /
 //    |       \   /            /
-//    |Low     \ /   Medium   / \  High
+//    |Low     \ /   Moderate / \  High
 //    |         /            /   \
 //    |        / \          /     \
 //  0 |------------------------------>
-//    0     10   15        40     50 (%)
+//    0     10   15        20     25 (%)
+
+
+double LBISHigh(double LB)
+{
+   if(LB <= 20)
+   {
+     return 0;
+   }
+   else if(LB >= 25)
+   {
+     return 1;
+   }
+   else // LB > 20 and LB < 25
+   {
+     return 0.2*LB - 4;
+   }
+}
+
+
+double LBISModerate(double LB)
+{
+
+   if((LB < 10) || (LB > 25))
+   {
+     return 0;
+   }
+   else if((LB => 10) && (Tpar < 15))
+   {
+      return 0.2*LB - 2;
+   }
+   else if ((LB >= 15) && (LB <= 20))
+   {
+      return 1;
+   }
+   else if ((LB > 20) && (LB < 25))
+   {
+      return -0.2*Tpar + 5;
+   }
+
+}
+
+double LBISLow(double LB)
+{
+
+   if(LB <= 10)
+   {
+     return 1;
+   }
+   else if( LB >= 15)
+   {
+     return 0;
+   }
+   else // between 10 and 15
+   {
+     return -0.2*LB + 3;
+   }
+
+}
+
+/* STATIC, TSS, GSS_LLVM, GSS, static_steal, mFAC2, FAC2, WF, AWFB, AWFC, AWFD, AWFE, mAF, AF, SS */
+/*     0     1       2      3      4           5      6    7   8     9     10     11   12  13  14 */
+/* |            Simple      |               Moderate  .    |   |   Aggressive                   | */
+
+// DLS
+//    
+//    ^____       5______6      8_____
+// 1  |    \      /      \      /
+//    |     \    /        \    /
+//    |      \  /          \  /
+//    |       \/            \/
+//    | Simple/\   Moderate /\  Aggressive
+//    |      /  \          /  \
+//    |     /    \        /    \
+//  0 |------------------------------>
+//    0    2     3       6     7 
 
 
 
-// ΔTpar
+
+// ΔDLS
 //
 //
-//  ____      ______         ____^____         ______       _____
-//      \    /      \       /  1 |    \       /      \     /
-//       \  /        \     /     |     \     /        \   /
-//        \/          \   /      |      \   /          \ /
-// MuchImproved        \ /       |       \ /            /
-//       /  \ Improved  /     NoChange    /  Degraded  / \  MuchDegraded
-//      /    \         / \       |       / \          /   \
-//     /      \       /   \      |      /   \        /     \
-//  <----------------------------|------------------------------>
-//   -15      -10    -5    -3     0     3     5     10      15   (%)
+//        ____        _^_        ____
+//       /    \      / | \      /    \
+//      /      \    /  |  \    /      \
+//     /        \  /   |   \  /        \
+//    / Less     \/    |    \/  More    \
+//   /Aggressive /\   Same  /\Aggressive \
+//  /           /  \   |   /  \           \
+// /           /    \  |  /    \           \
+//<--------------------|----------------------->
+//-4          -1       0       1            4
+
+
+
+
+void autoFuzzySearch()
+{
+
+/* Step 1  ..... Fuzzification .... */
+
+// We have two inputs ...1) Tpar and 2) LB metric 
+// But we can measure also the change in these two inputs, i.e. ΔTpar and ΔLB
+// Therefore we need four membership functions, for 
+// 1. Tpar   ... Short | Medium | Long
+// 2. LB     ... Low | Moderate | High
+// 3. ΔTpar  ... MuchImproved | Improved | NoChange | Degraded | MuchDegraded
+// 4. ΔLB    ... MuchImproved | Improved | NoChange | Degraded | MuchDegraded
+
+
+//Output
+// 1. DLS   ... which DLS to select
+// 2. ΔDLS  ... how far we should change the current one
+// 3. use chunksize ...currently on/off
+
+
+
+/*** see the membership functions above ***/
 
 
 double deltaTime = (autoLoopData.at(autoLoopName).cTime - autoLoopData.at(autoLoopName).bestTime)/autoLoopData.at(autoLoopName).cTime*100;
 
-
-
-// ΔLB
-//
-//
-//  ____      ______         ____^____         ______       _____
-//      \    /      \       /  1 |    \       /      \     /
-//       \  /        \     /     |     \     /        \   /
-//        \/          \   /      |      \   /          \ /
-// MuchImproved        \ /       |       \ /            /
-//       /  \ Improved  /     NoChange    /  Degraded  / \  MuchDegraded
-//      /    \         / \       |       / \          /   \
-//     /      \       /   \      |      /   \        /     \
-//  <----------------------------|------------------------------>
-//   -15      -10    -5    -3     0     3     5     10      15   (%)
-
-
 double deltaLB = autoLoopData.at(autoLoopName).cLB - autoLoopData.at(autoLoopName).bestLB;
-
-
-#define deltaLBisMuchImproved(deltaLB) if
-
 
 
 // Step 2 ... Rules 
 
+// If TparISShort then use simple DLS
+// If LBISLow then use simple DLS
+// If LBISModerate then use moderate DLS
+// If LBISHigh then use aggressive DLS
+// If TparISShort and LBISHigh then use moderate DLS and chunksize
+// If TparISLong and LBISHigh then use aggressive DLS
 
 
-
+// If DTparISMuchImproved and DlsISMuchImproved then use same DLS 
+// If DTparISImproved then then use same DLS and chunksize
+// If DTparISDegraded and DlbISDegraded then use more aggressive DLS
+// If DTparISDegraded and DlbISImproved then use chunksize
+// If DTparISMuchDegraded and DlbISImproved then use less aggressive DLS and chunksize
 
 // Step 3 ..... Defuzzification
 
@@ -666,8 +922,8 @@ double deltaLB = autoLoopData.at(autoLoopName).cLB - autoLoopData.at(autoLoopNam
 // Supports different search/optimization methods
 // 1. Exhaustive search 
 // 2. Binary search
-// 3. Fuzzy logic
-// 4. Random
+// 3. Random
+// 4. Fuzzy logic
 // ...Search/optimization method can be changed using environment variable: KMP_AUTO_Search_Method (to be extended)
 // Input 
 // N: number of loop iterations
