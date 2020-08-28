@@ -56,6 +56,10 @@ std::deque<std::shared_timed_mutex> mutexes;
 #include "kmp_stats_timing.h" // by Ali
 #include "kmp_stats.h"   //by Ali
 #include <x86intrin.h>
+
+#define MIN(a,b) (((a)<(b))?(a):(b))
+#define MAX(a,b) (((a)>(b))?(a):(b))
+
 extern tsc_tick_count __kmp_stats_start_time; //by Ali
 /* ------------------------------------------------------------------------ */
 /* ------------------------------------------------------------------------ */
@@ -280,7 +284,7 @@ void init_loop_timer(const char* loopLine, long ub){
 //  -------------------------------------------------------------------------------------------------------//
 
 
-void autoExhaustiveSearch()
+void autoExhaustiveSearch(int N, int P)
 {
    int currentPortfolioIndex =  autoLoopData.at(autoLoopName).cDLS;
    unsigned int searchTrials =  autoLoopData.at(autoLoopName).searchTrials;
@@ -312,6 +316,21 @@ void autoExhaustiveSearch()
 
     autoLoopData.at(autoLoopName).cDLS = currentPortfolioIndex; // select next DLS technique
     autoLoopData.at(autoLoopName).searchTrials++; //increment search trials
+
+    // Setting chunk size
+    if (autoLoopData.at(autoLoopName).cDLS == STATIC) // STATIC
+    {
+      autoLoopData.at(autoLoopName).cChunk = N/P;
+    }
+    else if (autoLoopData.at(autoLoopName).cDLS == SS) // SS
+    {
+      autoLoopData.at(autoLoopName).cChunk = 1;
+    }
+    else
+    {
+      autoLoopData.at(autoLoopName).cChunk = -1;
+    }
+
   }
   else //we tested all of the DLS portfolio
   {
@@ -324,7 +343,7 @@ void autoExhaustiveSearch()
    // set auto search of this loop to zero ...we already finshed the search
    autoLoopData.at(autoLoopName).autoSearch = 0;
 
-   printf("[AUTO] identified best DLS for loop %s to be %d \n", autoLoopName, autoLoopData.at(autoLoopName).bestDLS);
+   //printf("[AUTO] identified best DLS for loop %s to be %d \n", autoLoopName, autoLoopData.at(autoLoopName).bestDLS);
 
   }
 
@@ -337,7 +356,7 @@ void autoExhaustiveSearch()
  * DLS techniques order
  * STATIC, TSS, GSS_LLVM, GSS, static_steal, mFAC2, FAC2, WF, AWFB, AWFC, AWFD, AWFE, mAF, AF, SS */
 
-void autoBinarySearch()
+void autoBinarySearch(int N, int P)
 {
 
    int currentPortfolioIndex =  autoLoopData.at(autoLoopName).cDLS;
@@ -363,7 +382,7 @@ void autoBinarySearch()
       autoLoopData.at(autoLoopName).searchTrials = 0;
       // set auto search of this loop to zero ...we already finshed the search
       autoLoopData.at(autoLoopName).autoSearch = 0;
-      printf("[AUTO] identified best DLS for loop %s to be %d \n", autoLoopName, autoLoopData.at(autoLoopName).cDLS); 
+      //printf("[AUTO] identified best DLS for loop %s to be %d \n", autoLoopName, autoLoopData.at(autoLoopName).cDLS); 
    }
    //if load imbalance increased ... go right, i.e. current LB metric is higher than previous LB metric
    else if((autoLoopData.at(autoLoopName).cLB > autoLoopData.at(autoLoopName).bestLB) || (searchTrials == 0))
@@ -390,7 +409,21 @@ void autoBinarySearch()
       autoLoopData.at(autoLoopName).cDLS = 0;
    }
 
-   
+   // Setting chunk size
+   if (autoLoopData.at(autoLoopName).cDLS == STATIC) // STATIC
+   {
+     autoLoopData.at(autoLoopName).cChunk = N/P;
+   }
+   else if (autoLoopData.at(autoLoopName).cDLS == SS) // SS
+   {
+     autoLoopData.at(autoLoopName).cChunk = 1;
+   }
+   else
+   {
+     autoLoopData.at(autoLoopName).cChunk = -1;
+   }
+
+
    //increment search trials
    autoLoopData.at(autoLoopName).searchTrials++;
 
@@ -401,7 +434,7 @@ void autoBinarySearch()
 }
 
 
-void autoRandomSearch()
+void autoRandomSearch(int N, int P)
 {
 
       double currentLoadImbalance =  autoLoopData.at(autoLoopName).cLB/100;
@@ -435,6 +468,22 @@ void autoRandomSearch()
       }
 
       autoLoopData.at(autoLoopName).searchTrials++;
+
+      // Setting chunk size
+      if (autoLoopData.at(autoLoopName).cDLS == STATIC) // STATIC
+      {
+        autoLoopData.at(autoLoopName).cChunk = N/P;
+      }
+      else if (autoLoopData.at(autoLoopName).cDLS == SS) // SS
+      {
+        autoLoopData.at(autoLoopName).cChunk = 1;
+      }
+      else
+      {
+        autoLoopData.at(autoLoopName).cChunk = -1;
+      }
+
+
 }
 
 
@@ -718,7 +767,7 @@ double TparISMedium(double Tpar)
    {
      return 0;
    }
-   else if((Tpar => 0.07) && (Tpar < 0.1))
+   else if((Tpar >= 0.07) && (Tpar < 0.1))
    {
       return 33*Tpar - 2.31; 
    }
@@ -790,7 +839,7 @@ double LBISModerate(double LB)
    {
      return 0;
    }
-   else if((LB => 10) && (Tpar < 15))
+   else if((LB >= 10) && (LB < 15))
    {
       return 0.2*LB - 2;
    }
@@ -800,7 +849,7 @@ double LBISModerate(double LB)
    }
    else if ((LB > 20) && (LB < 25))
    {
-      return -0.2*Tpar + 5;
+      return -0.2*LB + 5;
    }
 
 }
@@ -829,16 +878,16 @@ double LBISLow(double LB)
 
 // DLS
 //    
-//    ^____       5______6      8_____
-// 1  |    \      /      \      /
-//    |     \    /        \    /
-//    |      \  /          \  /
-//    |       \/            \/
-//    | Simple/\   Moderate /\  Aggressive
-//    |      /  \          /  \
-//    |     /    \        /    \
-//  0 |------------------------------>
-//    0    2     3       6     7 
+//    ^____       5______6      8________________14
+// 1  |    \      /      \      /                | 
+//    |     \    /        \    /                 |
+//    |      \  /          \  /                  |
+//    |       \/            \/                   |
+//    | Simple/\   Moderate /\  Aggressive       |
+//    |      /  \          /  \                  |
+//    |     /    \        /    \                 | 
+//  0 |-------------------------------------------->
+//    0    2     3       6     7                 14
 
 
 
@@ -846,22 +895,24 @@ double LBISLow(double LB)
 // ΔDLS
 //
 //
-//        ____        _^_        ____
-//       /    \      / | \      /    \
-//      /      \    /  |  \    /      \
-//     /        \  /   |   \  /        \
-//    / Less     \/    |    \/  More    \
-//   /Aggressive /\   Same  /\Aggressive \
-//  /           /  \   |   /  \           \
-// /           /    \  |  /    \           \
+//  __________        _^_        __________
+// |          \      / | \      /          |
+// |           \    /  |  \    /           |
+// |            \  /   |   \  /            |
+// |    Less     \/    |    \/  More       |
+// |  Aggressive /\   Same  /\Aggressive   |
+// |            /  \   |   /  \            |
+// |           /    \  |  /    \           |
 //<--------------------|----------------------->
 //-4          -1       0       1            4
 
 
 
 
-void autoFuzzySearch()
+void autoFuzzySearch(int N, int P)
 {
+
+
 
 /* Step 1  ..... Fuzzification .... */
 
@@ -884,31 +935,183 @@ void autoFuzzySearch()
 /*** see the membership functions above ***/
 
 
-double deltaTime = (autoLoopData.at(autoLoopName).cTime - autoLoopData.at(autoLoopName).bestTime)/autoLoopData.at(autoLoopName).cTime*100;
+double DTpar = (autoLoopData.at(autoLoopName).cTime - autoLoopData.at(autoLoopName).bestTime)/autoLoopData.at(autoLoopName).cTime*100;
 
-double deltaLB = autoLoopData.at(autoLoopName).cLB - autoLoopData.at(autoLoopName).bestLB;
+double Dlb = autoLoopData.at(autoLoopName).cLB - autoLoopData.at(autoLoopName).bestLB;
+
+double Tpar = autoLoopData.at(autoLoopName).cTime ; // current Tpar
+double LB = autoLoopData.at(autoLoopName).cLB; //current load imbalance
+
+//printf("[AUTO] Tpar: %lf , LB: %lf \n", Tpar, LB);
+
+//output
+double DLSISAggressive = 0;
+double DLSISModerate = 0;
+double DLSISSimple = 0;
+
+double DLSISMoreAggressive = 0;
+double DLSISLessAggressive = 0;
+double DLSISSame = 0;
+int selectedDLS;
+double UseChunk = 0;
+
 
 
 // Step 2 ... Rules 
 
-// If TparISShort then use simple DLS
-// If LBISLow then use simple DLS
-// If LBISModerate then use moderate DLS
-// If LBISHigh then use aggressive DLS
-// If TparISShort and LBISHigh then use moderate DLS and chunksize
-// If TparISLong and LBISHigh then use aggressive DLS
+// .................... rules in the begining ...i.e. previous DLS and LB are -1
+if((autoLoopData.at(autoLoopName).bestLB == -1 ) && (autoLoopData.at(autoLoopName).bestTime == -1) )
+{
+    // If TparISShort then use simple DLS
+    // If LBISLow then use simple DLS
+    DLSISSimple = MAX(TparISShort(Tpar), LBISLow(LB));
 
+    // If LBISModerate then use moderate DLS
+    // If TparISShort and LBISHigh then use moderate DLS and chunksize
+    DLSISModerate = MAX(LBISModerate(LB),MIN(TparISShort(Tpar),LBISHigh(LB)));
 
-// If DTparISMuchImproved and DlsISMuchImproved then use same DLS 
+    // If LBISHigh then use aggressive DLS
+    // If TparISLong and LBISHigh then use aggressive DLS
+    DLSISAggressive = MAX(LBISHigh(LB), MIN(TparISLong(Tpar), LBISHigh(LB)));
+}
+else // ..........rules how to change current DLS smartly ...based on ΔDLS and ΔLB
+{
+// If DTparISMuchImproved and DlbISMuchImproved then use same DLS 
 // If DTparISImproved then then use same DLS and chunksize
-// If DTparISDegraded and DlbISDegraded then use more aggressive DLS
 // If DTparISDegraded and DlbISImproved then use chunksize
+// If LBISLow then DLSISSame
+      //MAX(DTparISImproved(DTpar), MIN(DTparISDegraded(DTpar), DlbISImproved(Dlb))) >= 0.5 ? UseChunk = 1 : UseChunk = 0;
+      UseChunk = MAX(DTparISImproved(DTpar), MIN(DTparISDegraded(DTpar), DlbISImproved(Dlb)));
+     
+      DLSISSame = MAX(MIN(DTparISMuchImproved(DTpar),DlbISMuchImproved(Dlb)), DTparISImproved(DTpar));
+      DLSISSame = MAX(DLSISSame, LBISLow(LB));
+     
+// If DTparISDegraded and DlbISDegraded then use more aggressive DLS
+// If LBISHigh then DLSISMoreAggressive
+      DLSISMoreAggressive = MAX(LBISHigh(LB), MIN(DTparISDegraded(DTpar), DlbISDegraded(Dlb)));
+
 // If DTparISMuchDegraded and DlbISImproved then use less aggressive DLS and chunksize
+      DLSISLessAggressive = MIN(DTparISMuchDegraded(DTpar), DlbISImproved(Dlb));
+     
+      //if(MIN(DTparISMuchDegraded(DTpar), DlbISImproved(Dlb)) >= 0.5)  {UseChunk = 1;}
+      UseChunk = MAX(UseChunk, MIN(DTparISMuchDegraded(DTpar), DlbISImproved(Dlb)));
+
+      //printf("[ATUO] DLSISSAME: %lf, DLSISMoreAggressive: %lf, DLSISLessAggressive: %lf, UseChunk: %lf \n", DLSISSame, DLSISMoreAggressive, DLSISLessAggressive, UseChunk);
+}
+
+
 
 // Step 3 ..... Defuzzification
 
+// if there is no previous time-step ...use the first set of rules
+if((autoLoopData.at(autoLoopName).bestLB == -1 ) && (autoLoopData.at(autoLoopName).bestTime == -1) )
+{
 
 
+    /* STATIC, TSS, GSS_LLVM, GSS, static_steal, mFAC2, FAC2, WF, AWFB, AWFC, AWFD, AWFE, mAF, AF, SS */
+    /*     0     1       2      3      4           5      6    7   8     9     10     11   12  13  14 */
+    /* |            Simple      |               Moderate  .    |   |   Aggressive                   | */
+
+    // DLS
+    //    
+    //    ^____       5______6      8________________14
+    // 1  |    \      /      \      /                | 
+    //    |     \    /        \    /                 |
+    //    |      \  /          \  /                  |
+    //    |       \/            \/                   |
+    //    | Simple/\   Moderate /\  Aggressive       |
+    //    |      /  \          /  \                  |
+    //    |     /    \        /    \                 | 
+    //  0 |-------------------------------------------->
+    //    0    2     3       6     7                 14
+
+
+    /* Calculate from the rules above the membership of each function*/
+
+
+    double DLSAgrgressiveArea = (((14-6) + (14-8))/2) * DLSISAggressive;
+    double DLSModerateArea = (( (7-2) + (6-5) )/2) * DLSISModerate;
+    double DLSSimpleArea = (((3-0) + (2-1) ) /2 ) * DLSISSimple;
+
+    double sumAreas = DLSAgrgressiveArea + DLSModerateArea + DLSSimpleArea;
+
+    double DLSAggressiveWeight = DLSAgrgressiveArea / sumAreas ;
+    double DLSModerateWeight = DLSModerateArea / sumAreas;
+    double DLSSimpleWeight = DLSSimpleArea / sumAreas;
+
+
+    selectedDLS = DLSAggressiveWeight*11 + DLSModerateWeight*2.5 + (1-DLSSimpleWeight)*3;
+
+    //printf("[Auto] AggressiveWeight: %lf \n ModerateWeight: %lf \n SimpleWeight: %lf \n SelectedDLS: %d \n", DLSAggressiveWeight, DLSModerateWeight, DLSSimpleWeight, selectedDLS);
+
+}
+else
+{
+    // ΔDLS
+    //  _________-2       _^_       2__________
+    // |          \      / | \      /          |
+    // |           \    /  |  \    /           |
+    // |            \  /   |   \  /            |
+    // |    Less     \/    |    \/  More       |
+    // |  Aggressive /\   Same  /\Aggressive   |
+    // |            /  \   |   /  \            |
+    // |           /    \  |  /    \           |
+    //<--------------------|----------------------->
+    //-4          -1  -0.5 0  0.5  1          4
+
+
+    double DLSLessAggressiveArea = (((-0.5 + 4) + (-2 +4)) /2) * DLSISLessAggressive;
+    double DLSSameArea = (((1+1) + (0.5+0.5))/2) * DLSISSame;
+    double DLSMoreAggressiveArea = (((4-0.5) + (4-2)) /2 ) * DLSISMoreAggressive;
+
+
+    double sumAreas = DLSLessAggressiveArea + DLSSameArea + DLSMoreAggressiveArea;
+
+    double DLSLessAggressiveWeight = DLSLessAggressiveArea / sumAreas;
+    double DLSSameWeight = DLSSameArea / sumAreas;
+    double DLSMoreAggressiveWeight = DLSMoreAggressiveArea / sumAreas;
+
+    double deltaDLS = DLSMoreAggressiveWeight*4 + DLSSameWeight*0 + DLSLessAggressiveWeight*-4;
+    selectedDLS = autoLoopData.at(autoLoopName).cDLS + deltaDLS;
+
+    //printf("[Auto] MoreAggressiveWeight: %lf \n SameWeight: %lf \n LessAggressiveWeight: %lf \n DeltaDLS: %lf \n SelectedDLS: %d \n", DLSMoreAggressiveWeight, DLSSameWeight, DLSLessAggressiveWeight, deltaDLS, selectedDLS);
+
+
+}
+
+//make sure that selected DLS is within limits
+//
+if(selectedDLS > 14)
+{
+  selectedDLS = 14;
+}
+else if (selectedDLS < 0)
+{
+  selectedDLS = 0;
+}
+
+//increment search trials
+autoLoopData.at(autoLoopName).searchTrials++;
+
+
+// save previous data
+autoLoopData.at(autoLoopName).bestLB    = autoLoopData.at(autoLoopName).cLB;
+autoLoopData.at(autoLoopName).bestDLS   = autoLoopData.at(autoLoopName).cDLS;
+autoLoopData.at(autoLoopName).bestChunk = autoLoopData.at(autoLoopName).cChunk;
+
+
+
+//set new DLS
+autoLoopData.at(autoLoopName).cDLS = selectedDLS;
+
+//UseChunk
+
+// Golden ratio = 0.618 - choose a chunk size in the "middle" between 1 and N/2P
+int mul = log2(N/P)*UseChunk; // UseChunk instead of the golden ratio
+autoLoopData.at(autoLoopName).cChunk = (N)/((2<<mul)*P);
+//printf("[AUTO] UseChunk is ON ... chunksize: %d \n",  autoLoopData.at(autoLoopName).cChunk);
+
+      
 
 }
 
@@ -933,25 +1136,25 @@ void auto_DLS_Search(int N, int P, int option)
 {
    int currentPortfolioIndex =  autoLoopData.at(autoLoopName).cDLS;
    
-   printf(" LoopName: %s, DLS: %d, time: %lf , LB: %lf, chunk: %d \n", autoLoopName, currentPortfolioIndex, autoLoopData.at(autoLoopName).cTime, autoLoopData.at(autoLoopName).cLB, option);
+   printf(" LoopName: %s, DLS: %d, time: %lf , LB: %lf, chunk: %d \n", autoLoopName, currentPortfolioIndex, autoLoopData.at(autoLoopName).cTime, autoLoopData.at(autoLoopName).cLB, autoLoopData.at(autoLoopName).cChunk);
 
 
     //Option 1: Exhaustive search  - try all DLS techniques and select the best one
     if(option == 1)
     {
-        autoExhaustiveSearch();
+        autoExhaustiveSearch(N, P);
     }
     else if(option == 2)
     {
-        autoBinarySearch();
+        autoBinarySearch(N, P);
     }
     else if(option == 3)
     {
-        autoRandomSearch();
+        autoRandomSearch(N, P);
     }
     else if (option == 4)
     {
-        autoFuzzySearch();
+        autoFuzzySearch(N, P);
     }
     else //normal LLVM auto
     {
@@ -967,25 +1170,7 @@ void auto_DLS_Search(int N, int P, int option)
 
     currentPortfolioIndex = autoLoopData.at(autoLoopName).cDLS;
 
-    // Setting chunk size
-    if (currentPortfolioIndex == STATIC) // STATIC
-    {
-      autoLoopData.at(autoLoopName).cChunk = N/P;
-    }
-    else if (currentPortfolioIndex == SS) // SS
-    {
-      autoLoopData.at(autoLoopName).cChunk = 1;
-    }
-    else
-    {
-      autoLoopData.at(autoLoopName).cChunk = -1;
-    }
-
-   /* 
-    // Golden ratio = 0.618 - choose a chunk size in the "middle" between 1 and N/2P
-    int mul = log2(N/P)*0.618;
-    autoLoopData.at(autoLoopName).cChunk = (N)/((2<<mul)*P);
-    */
+   
 
 
 }
