@@ -64,7 +64,7 @@ extern tsc_tick_count __kmp_stats_start_time; //by Ali
 /* ------------------------------------------------------------------------ */
 /* ------------------------------------------------------------------------ */
 #define LOOP_TIME_MEASURE_START if (getenv("KMP_TIME_LOOPS") !=NULL) { init_loop_timer(loc->psource, ub); } 
-#define LOOP_TIME_MEASURE_END if (getenv("KMP_TIME_LOOPS") !=NULL) { print_loop_timer(); } 
+#define LOOP_TIME_MEASURE_END if (getenv("KMP_TIME_LOOPS") !=NULL) { print_loop_timer(pr->schedule); } 
 
 #define INIT_CHUNK_RECORDING if (getenv("KMP_PRINT_CHUNKS") !=NULL) { init_chunk_sizes((int) tc); }
 #define STORE_CHUNK_INFO if (getenv("KMP_PRINT_CHUNKS") !=NULL) { store_chunk_sizes((int) *p_lb, (int) *p_ub, (int) tid); } 
@@ -84,7 +84,7 @@ double autoLBPercentIm;
 std::atomic<int> autoMeanThreadTime = -1; 
 std::atomic<int> autoTimerFirstEntry = 0; 
 std::atomic<int> autoThreadCount = 0;  
-  
+int global_chunk;
  
 std::atomic<int> autoEnter = 0;
 std::atomic<int> autoWait = 1;
@@ -328,7 +328,7 @@ void autoExhaustiveSearch(int N, int P)
     }
     else
     {
-      autoLoopData.at(autoLoopName).cChunk = -1;
+      autoLoopData.at(autoLoopName).cChunk = 1;
     }
 
   }
@@ -343,8 +343,9 @@ void autoExhaustiveSearch(int N, int P)
    // set auto search of this loop to zero ...we already finshed the search
    autoLoopData.at(autoLoopName).autoSearch = 0;
 
-   //printf("[AUTO] identified best DLS for loop %s to be %d \n", autoLoopName, autoLoopData.at(autoLoopName).bestDLS);
-
+    #if KMP_DEBUG
+       printf("[AUTO] identified best DLS for loop %s to be %d \n", autoLoopName, autoLoopData.at(autoLoopName).bestDLS);
+    #endif
   }
 
 }
@@ -367,7 +368,9 @@ void autoBinarySearch(int N, int P)
 
    step = DLSProtfolioSize/(1<<autoLoopData.at(autoLoopName).searchTrials);
 
-   //printf("current LB: %lf , previous LB: %lf, step: %d\n", autoLoopData.at(autoLoopName).cLB, autoLoopData.at(autoLoopName).bestLB, step);
+    #if KMP_DEBUG
+         printf("current LB: %lf , previous LB: %lf, step: %d\n", autoLoopData.at(autoLoopName).cLB, autoLoopData.at(autoLoopName).bestLB, step);
+    #endif
   
    // if there is no previous LB metric ... previous LB = current LB
    if (autoLoopData.at(autoLoopName).bestLB == -1)
@@ -382,21 +385,27 @@ void autoBinarySearch(int N, int P)
       autoLoopData.at(autoLoopName).searchTrials = 0;
       // set auto search of this loop to zero ...we already finshed the search
       autoLoopData.at(autoLoopName).autoSearch = 0;
-      //printf("[AUTO] identified best DLS for loop %s to be %d \n", autoLoopName, autoLoopData.at(autoLoopName).cDLS); 
+      #if KMP_DEBUG
+         printf("[AUTO] identified best DLS for loop %s to be %d \n", autoLoopName, autoLoopData.at(autoLoopName).cDLS); 
+      #endif
    }
    //if load imbalance increased ... go right, i.e. current LB metric is higher than previous LB metric
    else if((autoLoopData.at(autoLoopName).cLB > autoLoopData.at(autoLoopName).bestLB) || (searchTrials == 0))
    {
       //go right
       autoLoopData.at(autoLoopName).cDLS += step;
-      //printf("going right \n");
+      #if KMP_DEBUG
+         printf("going right \n");
+      #endif
    }
    //if load imbalance is low  ... go left
    else 
    {
      // go left
      autoLoopData.at(autoLoopName).cDLS -= step;
-     //printf("go left \n");
+     #if KMP_DEBUG
+       printf("go left \n");
+     #endif
    }
 
    //adjust the output schedule to be within range
@@ -420,7 +429,7 @@ void autoBinarySearch(int N, int P)
    }
    else
    {
-     autoLoopData.at(autoLoopName).cChunk = -1;
+     autoLoopData.at(autoLoopName).cChunk = 1;
    }
 
 
@@ -450,8 +459,10 @@ void autoRandomSearch(int N, int P)
 
       // random number between 0 and 1
       randomNum = (double) rand()/ (double) RAND_MAX;
-      
-      //printf("jumpProbability %lf, randomNum %lf \n", jumpProbability, randomNum);
+       
+       #if KMP_DEBUG      
+       printf("jumpProbability %lf, randomNum %lf \n", jumpProbability, randomNum);
+       #endif
 
       if (jumpProbability > randomNum) // probability to select another DLS is higher than a random number
       {
@@ -463,7 +474,9 @@ void autoRandomSearch(int N, int P)
         // select another DLS randomly
         autoLoopData.at(autoLoopName).cDLS = rand()% autoDLSPortfolio.size();
 
+       #if KMP_DEBUG
        printf("[Auto] Randomly selected %d \n", autoLoopData.at(autoLoopName).cDLS);
+       #endif
 
       }
 
@@ -480,7 +493,7 @@ void autoRandomSearch(int N, int P)
       }
       else
       {
-        autoLoopData.at(autoLoopName).cChunk = -1;
+        autoLoopData.at(autoLoopName).cChunk = 1;
       }
 
 
@@ -995,8 +1008,10 @@ else // ..........rules how to change current DLS smartly ...based on ΔDLS and 
      
       //if(MIN(DTparISMuchDegraded(DTpar), DlbISImproved(Dlb)) >= 0.5)  {UseChunk = 1;}
       UseChunk = MAX(UseChunk, MIN(DTparISMuchDegraded(DTpar), DlbISImproved(Dlb)));
-
-      //printf("[ATUO] DLSISSAME: %lf, DLSISMoreAggressive: %lf, DLSISLessAggressive: %lf, UseChunk: %lf \n", DLSISSame, DLSISMoreAggressive, DLSISLessAggressive, UseChunk);
+      
+       #if KMP_DEBUG
+      printf("[ATUO] DLSISSAME: %lf, DLSISMoreAggressive: %lf, DLSISLessAggressive: %lf, UseChunk: %lf \n", DLSISSame, DLSISMoreAggressive, DLSISLessAggressive, UseChunk);
+      #endif
 }
 
 
@@ -1041,8 +1056,9 @@ if((autoLoopData.at(autoLoopName).bestLB == -1 ) && (autoLoopData.at(autoLoopNam
 
 
     selectedDLS = DLSAggressiveWeight*11 + DLSModerateWeight*2.5 + (1-DLSSimpleWeight)*3;
-
-    //printf("[Auto] AggressiveWeight: %lf \n ModerateWeight: %lf \n SimpleWeight: %lf \n SelectedDLS: %d \n", DLSAggressiveWeight, DLSModerateWeight, DLSSimpleWeight, selectedDLS);
+#if KMP_DEBUG
+    printf("[Auto] AggressiveWeight: %lf \n ModerateWeight: %lf \n SimpleWeight: %lf \n SelectedDLS: %d \n", DLSAggressiveWeight, DLSModerateWeight, DLSSimpleWeight, selectedDLS);
+#endif
 
 }
 else
@@ -1073,9 +1089,9 @@ else
 
     double deltaDLS = DLSMoreAggressiveWeight*4 + DLSSameWeight*0 + DLSLessAggressiveWeight*-4;
     selectedDLS = autoLoopData.at(autoLoopName).cDLS + deltaDLS;
-
-    //printf("[Auto] MoreAggressiveWeight: %lf \n SameWeight: %lf \n LessAggressiveWeight: %lf \n DeltaDLS: %lf \n SelectedDLS: %d \n", DLSMoreAggressiveWeight, DLSSameWeight, DLSLessAggressiveWeight, deltaDLS, selectedDLS);
-
+#if KMP_DEBUG
+    printf("[Auto] MoreAggressiveWeight: %lf \n SameWeight: %lf \n LessAggressiveWeight: %lf \n DeltaDLS: %lf \n SelectedDLS: %d \n", DLSMoreAggressiveWeight, DLSSameWeight, DLSLessAggressiveWeight, deltaDLS, selectedDLS);
+#endif
 
 }
 
@@ -1109,8 +1125,9 @@ autoLoopData.at(autoLoopName).cDLS = selectedDLS;
 // Golden ratio = 0.618 - choose a chunk size in the "middle" between 1 and N/2P
 int mul = log2(N/P)*UseChunk; // UseChunk instead of the golden ratio
 autoLoopData.at(autoLoopName).cChunk = (N)/((2<<mul)*P);
-//printf("[AUTO] UseChunk is ON ... chunksize: %d \n",  autoLoopData.at(autoLoopName).cChunk);
-
+#if KMP_DEBUG
+ printf("[AUTO] UseChunk is ON ... chunksize: %d \n",  autoLoopData.at(autoLoopName).cChunk);
+#endif
       
 
 }
@@ -1135,8 +1152,9 @@ autoLoopData.at(autoLoopName).cChunk = (N)/((2<<mul)*P);
 void auto_DLS_Search(int N, int P, int option) 
 {
    int currentPortfolioIndex =  autoLoopData.at(autoLoopName).cDLS;
-   
+   #if KMP_DEBUG
    printf(" LoopName: %s, DLS: %d, time: %lf , LB: %lf, chunk: %d \n", autoLoopName, currentPortfolioIndex, autoLoopData.at(autoLoopName).cTime, autoLoopData.at(autoLoopName).cLB, autoLoopData.at(autoLoopName).cChunk);
+   #endif
 
 
     //Option 1: Exhaustive search  - try all DLS techniques and select the best one
@@ -1263,7 +1281,9 @@ void end_auto_loop_timer(int nproc, int tid)
                 if (autoLBPercentIm > (autoLoopData.at(autoLoopName).cLB + 1 ) ) // if load imbalance increased with margin
                 {
                 // set autoSearch to 1
+                #if KMP_DEBUG
                 printf("[%s] load imbalance increased from %lf to %lf ... Setting autoSearch to 1 ...\n",autoLoopName,autoLoopData.at(autoLoopName).cLB, autoLBPercentIm);
+                #endif
                 autoLoopData.at(autoLoopName).autoSearch = 1;
                 }
                 autoLoopData.at(autoLoopName).cLB = autoLBPercentIm; // update LB
@@ -1274,7 +1294,35 @@ void end_auto_loop_timer(int nproc, int tid)
 
 // ------------------------------------------ End of Auto Extension ------------------------------------
 
-void print_loop_timer(){
+void print_loop_timer(enum sched_type schedule) //modified to take the schedule and chunk size
+{
+
+            std::string DLS[70];
+            DLS[33] = "STATIC";
+            DLS[35] = "SS";
+            DLS[39] = "TSS"; 
+            DLS[42] = "GSS";
+            DLS[43] = "Auto(LLVM)"; 
+            DLS[44] = "Static Steal";
+
+            //--------------LB4OMP_extensions----------------
+            DLS[48] = "FSC" ; 
+            DLS[49] = "TAP"; 
+            DLS[50] = "FAC";
+            DLS[51] = "mFAC"; 
+            DLS[52] = "FAC2";
+            DLS[53] = "mFac2";
+            DLS[54] = "WF"; 
+            DLS[55] = "BOLD"; 
+            DLS[56] = "AWF-B";
+            DLS[57] = "AWF-C";
+            DLS[58] = "AWF-D";
+            DLS[59] = "AWF-E"; 
+            DLS[60] = "AF"; 
+            DLS[61] = "mAF";
+            DLS[62] = "Profiling";
+            DLS[63] = "AWF";
+  
 	    std::chrono::high_resolution_clock::time_point mytime;
 	    int count = 0;
 	    count = std::atomic_fetch_sub(&timeUpdates, 1);
@@ -1292,7 +1340,7 @@ void print_loop_timer(){
 	    	}
 	    	std::fstream ofs;
 	    	ofs.open(fileData, std::ofstream::out | std::ofstream::app);
-	        ofs << "LoopTime: " << time_span.count() << std::endl;
+	        ofs << "LoopTime: " << time_span.count() << " Schedule: " << DLS[schedule] << " Chunk: " << global_chunk << std::endl; //modified to print the current schedule and chunk size
 	        if(currentChunkIndex != -1 && chunkSizeInfo != NULL){
 				    for(int i = 0 ; i < currentChunkIndex ; i += 4){
 					       ofs << "chunkLocation: " << globalLoopline << " lower " << chunkSizeInfo[i] << " upper " << chunkSizeInfo[i+1] <<  " chunksize " << chunkSizeInfo[i+2] << " tid " << chunkSizeInfo[i+3]<< std::endl;
@@ -1634,7 +1682,7 @@ void __kmp_dispatch_init_algorithm(ident_t *loc, int gtid,
       schedule = autoDLSPortfolio[autoLoopData.at(autoLoopName).cDLS];
       if (autoLoopData.at(autoLoopName).cChunk > 0)
       {
-          chunk = min_chunk = autoLoopData.at(autoLoopName).cChunk; // set minimum chunk size
+          chunk = min_chunk = global_chunk = autoLoopData.at(autoLoopName).cChunk; // set minimum chunk size
           pr->u.p.min_chunk = min_chunk;
           pr->u.p.parm1 = chunk;
       }
