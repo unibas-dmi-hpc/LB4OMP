@@ -1278,7 +1278,7 @@ void end_auto_loop_timer(int nproc, int tid)
                 autoLoopData.at(autoLoopName).cTime = autoTimerEnd; // update execution time
                  
                 // check if load imbalance is increased from previous time ...also time
-                if (autoLBPercentIm > (autoLoopData.at(autoLoopName).cLB + 1 ) ) // if load imbalance increased with margin
+                if (autoLBPercentIm > (autoLoopData.at(autoLoopName).cLB + 10 ) ) // if load imbalance increased with margin
                 {
                 // set autoSearch to 1
                 #if KMP_DEBUG
