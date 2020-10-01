@@ -1097,9 +1097,11 @@ else
 
 //make sure that selected DLS is within limits
 //
-if(selectedDLS > 14)
+
+int limit = autoDLSPortfolio.size() -1; 
+if(selectedDLS > limit)
 {
-  selectedDLS = 14;
+  selectedDLS = limit;
 }
 else if (selectedDLS < 0)
 {
