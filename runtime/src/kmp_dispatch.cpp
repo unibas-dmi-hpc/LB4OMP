@@ -115,26 +115,26 @@ std::vector<sched_type> autoDLSPortfolio{
   kmp_sch_trapezoidal, // TSS          ... 1
   kmp_sch_guided_analytical_chunked,// ... 2 LLVM RTL original auto, which is guided with minimum chunk size
   __kmp_guided, //                     ... 3 GSS
-  kmp_sch_static_steal,             // ... 4 static_steal
   //--------------LB4OMP_extensions----------
   //kmp_sch_fsc,  // requires profiling
   //kmp_sch_tap,  // requires profiling 
   //kmp_sch_fac,  // requires profiling
   //kmp_sch_faca, // requires profiling
-  kmp_sch_fac2a,                      //  ... 5
-  kmp_sch_fac2,                       //  ... 6
-  kmp_sch_wf,                         //  ... 7 
+  kmp_sch_fac2a,                      //  ... 4
+  kmp_sch_fac2,                       //  ... 5
+  kmp_sch_static_steal,             // ... 6 static_steal
+  //kmp_sch_wf,                         //  not needed on homogeneous cores 
   //kmp_sch_bold,  // requires profiling
-  kmp_sch_awf_b,                      //  ... 8
-  kmp_sch_awf_c,                     //   ... 9
-  kmp_sch_awf_d,                    //   ... 10
-  kmp_sch_awf_e,                   //    ... 11
-  kmp_sch_af_a,                   //     ... 12
-  kmp_sch_af,                    //      ... 13
-  kmp_sch_dynamic_chunked       //       ... 14   SS  
+  kmp_sch_awf_b,                      //  ... 7
+  kmp_sch_awf_c,                     //   ... 8
+  kmp_sch_awf_d,                    //   ... 9
+  kmp_sch_awf_e,                   //    ... 10
+  kmp_sch_af_a,                   //     ... 11
+  kmp_sch_af,                    //      ... 12
+  kmp_sch_dynamic_chunked       //       ... 13   SS  
   }; 
 
-enum DLSPortfolio {STATIC, TSS, GSS_LLVM, GSS, static_steal, mFAC2, FAC2, WF, AWFB, AWFC, AWFD, AWFE, mAF, AF, SS};
+enum DLSPortfolio {STATIC, TSS, GSS_LLVM, GSS, mFAC2, FAC2, static_steal, AWFB, AWFC, AWFD, AWFE, mAF, AF, SS};
 
 
 // ------------------------------------------ end Auto extension variables -------------------- 
@@ -283,6 +283,36 @@ void init_loop_timer(const char* loopLine, long ub){
 //  University of Basel, Switzerland
 //  -------------------------------------------------------------------------------------------------------//
 
+void autoSetChunkSize(int N, int P)
+{
+
+int golden = atoi(std::getenv("KMP_Golden_Chunksize"));
+
+if (golden)
+{
+   // Golden ratio = 0.618 - choose a chunk size in the "middle" between 1 and N/2P
+   int mul = log2(N/P)*0.618; // Use golden ratio
+   autoLoopData.at(autoLoopName).cChunk = (N)/((2<<mul)*P);
+}
+else // default
+{
+  //Setting chunk size
+  if (autoLoopData.at(autoLoopName).cDLS == STATIC) // STATIC
+  {
+    autoLoopData.at(autoLoopName).cChunk = N/P;
+  }
+  else if (autoLoopData.at(autoLoopName).cDLS == SS) // SS
+  {
+    autoLoopData.at(autoLoopName).cChunk = 1;
+  }
+  else
+  {
+    autoLoopData.at(autoLoopName).cChunk = 1;
+  }
+
+}
+
+}
 
 void autoExhaustiveSearch(int N, int P)
 {
@@ -317,19 +347,6 @@ void autoExhaustiveSearch(int N, int P)
     autoLoopData.at(autoLoopName).cDLS = currentPortfolioIndex; // select next DLS technique
     autoLoopData.at(autoLoopName).searchTrials++; //increment search trials
 
-    // Setting chunk size
-    if (autoLoopData.at(autoLoopName).cDLS == STATIC) // STATIC
-    {
-      autoLoopData.at(autoLoopName).cChunk = N/P;
-    }
-    else if (autoLoopData.at(autoLoopName).cDLS == SS) // SS
-    {
-      autoLoopData.at(autoLoopName).cChunk = 1;
-    }
-    else
-    {
-      autoLoopData.at(autoLoopName).cChunk = 1;
-    }
 
   }
   else //we tested all of the DLS portfolio
@@ -418,19 +435,6 @@ void autoBinarySearch(int N, int P)
       autoLoopData.at(autoLoopName).cDLS = 0;
    }
 
-   // Setting chunk size
-   if (autoLoopData.at(autoLoopName).cDLS == STATIC) // STATIC
-   {
-     autoLoopData.at(autoLoopName).cChunk = N/P;
-   }
-   else if (autoLoopData.at(autoLoopName).cDLS == SS) // SS
-   {
-     autoLoopData.at(autoLoopName).cChunk = 1;
-   }
-   else
-   {
-     autoLoopData.at(autoLoopName).cChunk = 1;
-   }
 
 
    //increment search trials
@@ -481,21 +485,6 @@ void autoRandomSearch(int N, int P)
       }
 
       autoLoopData.at(autoLoopName).searchTrials++;
-
-      // Setting chunk size
-      if (autoLoopData.at(autoLoopName).cDLS == STATIC) // STATIC
-      {
-        autoLoopData.at(autoLoopName).cChunk = N/P;
-      }
-      else if (autoLoopData.at(autoLoopName).cDLS == SS) // SS
-      {
-        autoLoopData.at(autoLoopName).cChunk = 1;
-      }
-      else
-      {
-        autoLoopData.at(autoLoopName).cChunk = 1;
-      }
-
 
 }
 
@@ -1125,6 +1114,16 @@ autoLoopData.at(autoLoopName).cDLS = selectedDLS;
 //UseChunk
 
 // Golden ratio = 0.618 - choose a chunk size in the "middle" between 1 and N/2P
+//
+// put limits on UseChunk between 0.4 and 0.6 
+if (UseChunk > 0.6)
+{
+    UseChunk = 0.6;
+}
+else if (UseChunk < 0.4)
+{
+   UseChunk = 0.4;
+}
 int mul = log2(N/P)*UseChunk; // UseChunk instead of the golden ratio
 autoLoopData.at(autoLoopName).cChunk = (N)/((2<<mul)*P);
 #if KMP_DEBUG
@@ -1162,18 +1161,28 @@ void auto_DLS_Search(int N, int P, int option)
     //Option 1: Exhaustive search  - try all DLS techniques and select the best one
     if(option == 1)
     {
+        // set DLS
         autoExhaustiveSearch(N, P);
+        // set chunk size
+        autoSetChunkSize(N, P);
     }
     else if(option == 2)
     {
+        // set DLS
         autoBinarySearch(N, P);
+        // set chunk size
+        autoSetChunkSize(N, P);
     }
     else if(option == 3)
     {
+        // set DLS
         autoRandomSearch(N, P);
+        // set chunk size
+        autoSetChunkSize(N, P);
     }
     else if (option == 4)
     {
+        // set DLS and chunk size
         autoFuzzySearch(N, P);
     }
     else //normal LLVM auto
@@ -1244,7 +1253,7 @@ void end_auto_loop_timer(int nproc, int tid)
             
             //std::cout << "tid: " << tid << " time: " << time[tid] << "\n";
 
-            std::atomic_fetch_add(&autoMeanThreadTime, time[tid]); //accumulate thread finishing times in ms
+            std::atomic_fetch_add(&autoMeanThreadTime, (int) time[tid]); //accumulate thread finishing times in ms
            
             localNProc = std::atomic_fetch_add(&autoThreadCount, 1); //number of accummulations, should be equal to nproc
  
