@@ -1713,8 +1713,8 @@ void __kmp_dispatch_init_algorithm(ident_t *loc, int gtid,
       schedule = autoDLSPortfolio[autoLoopData.at(autoLoopName).cDLS];
       if (autoLoopData.at(autoLoopName).cChunk > 0)
       {
-          chunk = min_chunk = global_chunk = autoLoopData.at(autoLoopName).cChunk; // set minimum chunk size
-          pr->u.p.min_chunk = min_chunk;
+          chunk =  global_chunk = autoLoopData.at(autoLoopName).cChunk; // set minimum chunk size
+          pr->u.p.min_chunk = chunk;
           pr->u.p.parm1 = chunk;
       }
       
