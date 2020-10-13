@@ -1638,6 +1638,8 @@ void __kmp_dispatch_init_algorithm(ident_t *loc, int gtid,
     }
   }
 
+ // update global_chunk value for printing
+ global_chunk = chunk;
 
 // AUTO by Ali
     if(AUTO_FLAG)
