@@ -517,73 +517,33 @@ void autoRandomSearch(int N, int P)
 // Membership functions for ΔLB
 //
 //
-//     ____      ________    ____^____    ________      _______
-//         \    /        \  /  1 |    \  /        \    /
-//          \  /          \/     |     \/          \  /
-//           \/            \     |     /            \/
-// MuchImproved           / \    |    /\            /\
-//          /  \Improved /   \ NoChange \  Degraded/  \  MuchDegraded
-//         /    \       /     \  |  /    \        /    \
-//        /      \     /       \ | /      \      /      \
-//  <----------------------------|------------------------------>
-//      -10    -7.5     -2.5     0       2.5   7.5        10        (%)
+//           _____-3 -1.5____^____1.5 3________     
+//                   \  /  1 |    \  /          
+//                    \/     |     \/          
+//                    /\     |     /\
+//                   /  \    |    /  \
+//         Improved /    \ NoChange   \  Degraded
+//                 /      \  |  /      \
+//                /        \ | /        \
+//  <------------------------|------------------------->
+//              -3          0          3             (%)
 
-
-double DlbISMuchImproved(double deltaLB)
-{
-
-     if (deltaLB < -10)
-     {
-        return 1.0;
-     }
-     else if ((deltaLB >= -10) && (deltaLB < 7.5))
-     {
-         return -0.4*deltaLB - 3; 
-     }
-     else
-     {
-        return 0.0;
-     }
-
-}
-
-double DlbISMuchDegraded(double deltaLB)
-{
-
-     if (deltaLB > 10)
-     {
-        return 1.0;
-     }
-     else if ((deltaLB <= 10) && (deltaLB > 7.5))
-     {
-         return 0.4*deltaLB - 3;
-     }
-     else
-     {
-        return 0.0;
-     }
-
-}
 
 
 double DlbISDegraded(double deltaLB)
 {
 
-     if ((deltaLB > 10) || (deltaLB < 0) )
-     {
-        return 0;
-     }
-     else if ((deltaLB <= 10) && (deltaLB >= 7.5))
-     {
-         return -0.4*deltaLB + 4;
-     }
-     else if ((deltaLB <= 7.5) && (deltaLB >= 2.5))
+     if ((deltaLB >= 3))
      {
         return 1;
      }
-     else if (deltaLB < 2.5)
+     else if ((deltaLB < 3) && (deltaLB >= 0))
      {
-        return 0.4*deltaLB;
+         return 0.33*deltaLB;
+     }
+     else if ((deltaLB <= 0))
+     {
+        return 0;
      }
 
 }
@@ -592,21 +552,17 @@ double DlbISDegraded(double deltaLB)
 double DlbISImproved(double deltaLB)
 {
 
-     if ((deltaLB < -10) || (deltaLB > 0) )
-     {
-        return 0;
-     }
-     else if ((deltaLB >= -10) && (deltaLB <= -7.5))
-     {
-         return 0.4*deltaLB + 4;
-     }
-     else if ((deltaLB >= -7.5) && (deltaLB <= -2.5))
+     if ((deltaLB < -3) )
      {
         return 1;
      }
-     else if (deltaLB > -2.5)
+     else if ((deltaLB >= -3) && (deltaLB <= -0))
      {
-        return -0.4*deltaLB;
+         return -0.33*deltaLB ;
+     }
+     else if ((deltaLB >= 0))
+     {
+        return 0;
      }
 
 }
@@ -615,21 +571,21 @@ double DlbISImproved(double deltaLB)
 double DlbISNoChange(double deltaLB)
 {
 
-     if ((deltaLB < -2.5) || (deltaLB > 2.5) )
+     if ((deltaLB < -3) || (deltaLB > 3) )
      {
         return 0;
      }
-     else if ((deltaLB >= -2.5) && (deltaLB <= 1.25))
+     else if ((deltaLB >= -3) && (deltaLB <= -1.5))
      {
-         return 0.8*deltaLB + 2;
+         return  0.66*deltaLB + 2;
      }
-     else if ((deltaLB >= -1.25) && (deltaLB <= 1.25))
+     else if ((deltaLB >= -1.5) && (deltaLB <= 1.5))
      {
         return 1;
      }
-     else if (deltaLB > 1.25)
+     else if ((deltaLB > 1.5) && (deltaLB <= 3 ))
      {
-        return -0.8*deltaLB + 2;
+        return -0.66*deltaLB + 2;
      }
 }
 
@@ -637,94 +593,54 @@ double DlbISNoChange(double deltaLB)
 // Membership functions for ΔTpar
 //
 //
-//     ____      ________    ____^____    ________      _______
-//         \    /        \  /  1 |    \  /        \    /
-//          \  /          \/     |     \/          \  /
-//           \/            \     |     /            \/
-// MuchImproved           / \    |    /\            /\
-//          /  \Improved /   \ NoChange \  Degraded/  \  MuchDegraded
-//         /    \       /     \  |  /    \        /    \
-//        /      \     /       \ | /      \      /      \
-//  <----------------------------|------------------------------>
-//      -10    -7.5     -2.5     0       2.5   7.5        10        (%)
+//     _____-3       ____^____       3______  
+//           \      /  1 |    \      /     
+//            \    /     |     \    /      
+//             \  /      |      \  /       
+//              \/       |       \/           
+//      Improved/\    NoChange   /\   Degraded
+//             /  \      |      /  \
+//            /    \     |     /    \
+//  <--------------------|---------------------->
+//           -2    -1    0     1    2           (%)
 
 
-
-double DTparISMuchImproved(double DTpar)
-{
-
-     if (DTpar < -10)
-     {
-        return 1.0;
-     }
-     else if ((DTpar >= -10) && (DTpar < 7.5))
-     {
-         return -0.4*DTpar - 3;
-     }
-     else
-     {
-        return 0.0;
-     }
-
-}
-
-double DTparISMuchDegraded(double DTpar)
-{
-
-     if (DTpar > 10)
-     {
-        return 1.0;
-     }
-     else if ((DTpar <= 10) && (DTpar > 7.5))
-     {
-         return 0.4*DTpar - 3;
-     }
-     else
-     {
-        return 0.0;
-     }
-
-}
 
 double DTparISNoChange(double DTpar)
 {
 
-     if ((DTpar < -2.5) || (DTpar > 2.5) )
+     if ((DTpar < -2) || (DTpar > 2) )
      {
         return 0;
      }
-     else if ((DTpar >= -2.5) && (DTpar <= 1.25))
+     else if ((DTpar >= -2) && (DTpar <= -1))
      {
-         return 0.8*DTpar + 2;
+         return DTpar + 2;
      }
-     else if ((DTpar >= -1.25) && (DTpar <= 1.25))
+     else if ((DTpar >= -1) && (DTpar <= 1))
      {
         return 1;
      }
-     else if (DTpar > 1.25)
+     else if ((DTpar > 1) && (DTpar < 2))
      {
-        return -0.8*DTpar + 2;
+        return -1*DTpar + 2;
      }
 }
 
 double DTparISDegraded(double DTpar)
 {
 
-     if ((DTpar > 10) || (DTpar < 0) )
+     if ((DTpar < 1) )
      {
         return 0;
      }
-     else if ((DTpar <= 10) && (DTpar >= 7.5))
+     else if ((DTpar <= 3) && (DTpar >= 1))
      {
-         return -0.4*DTpar + 4;
+         return 0.5*DTpar - 0.5;
      }
-     else if ((DTpar <= 7.5) && (DTpar >= 2.5))
+     else if ((DTpar >= 3))
      {
         return 1;
-     }
-     else if (DTpar < 2.5)
-     {
-        return 0.4*DTpar;
      }
 
 }
@@ -733,21 +649,17 @@ double DTparISDegraded(double DTpar)
 double DTparISImproved(double DTpar)
 {
 
-     if ((DTpar < -10) || (DTpar > 0) )
+     if ((DTpar > -1) )
      {
         return 0;
      }
-     else if ((DTpar >= -10) && (DTpar <= -7.5))
+     else if ((DTpar >= -3) && (DTpar <= -1))
      {
-         return 0.4*DTpar + 4;
+         return -0.5*DTpar - 0.5;
      }
-     else if ((DTpar >= -7.5) && (DTpar <= -2.5))
+     else if ((DTpar <= -3))
      {
         return 1;
-     }
-     else if (DTpar > -2.5)
-     {
-        return -0.4*DTpar;
      }
 
 }
@@ -828,31 +740,31 @@ double TparISShort(double Tpar)
 
 // LB
 //    
-//    ^____           ______       _____
-// 1  |    \         /      \     /
-//    |     \       /        \   /
-//    |      \     /          \ /
-//    |       \   /            /
-//    |Low     \ /   Moderate / \  High
-//    |         /            /   \
-//    |        / \          /     \
+//    ^____        _____       _____
+// 1  |    \      /     \     /
+//    |     \    /       \   /
+//    |      \  /         \ /
+//    |       \/           /
+//    |Low    /\  Moderate/ \  High
+//    |      /  \        /   \
+//    |     /    \      /     \
 //  0 |------------------------------>
-//    0     10   15        20     25 (%)
+//    0     1    2     4       5  10 (%)
 
 
 double LBISHigh(double LB)
 {
-   if(LB <= 20)
+   if(LB <= 4)
    {
      return 0;
    }
-   else if(LB >= 25)
+   else if(LB >= 10)
    {
      return 1;
    }
-   else // LB > 20 and LB < 25
+   else // LB > 4 and LB < 10
    {
-     return 0.2*LB - 4;
+     return 0.166*LB - 0.64;
    }
 }
 
@@ -860,21 +772,21 @@ double LBISHigh(double LB)
 double LBISModerate(double LB)
 {
 
-   if((LB < 10) || (LB > 25))
+   if((LB < 1) || (LB > 5))
    {
      return 0;
    }
-   else if((LB >= 10) && (LB < 15))
+   else if((LB >= 1) && (LB < 2))
    {
-      return 0.2*LB - 2;
+      return LB - 1;
    }
-   else if ((LB >= 15) && (LB <= 20))
+   else if ((LB >= 2) && (LB <= 4))
    {
       return 1;
    }
-   else if ((LB > 20) && (LB < 25))
+   else if ((LB > 4) && (LB < 5))
    {
-      return -0.2*LB + 5;
+      return -1*LB + 5;
    }
 
 }
@@ -882,17 +794,17 @@ double LBISModerate(double LB)
 double LBISLow(double LB)
 {
 
-   if(LB <= 10)
+   if(LB <= 1)
    {
      return 1;
    }
-   else if( LB >= 15)
+   else if( LB >= 2)
    {
      return 0;
    }
-   else // between 10 and 15
+   else // between 1 and 2
    {
-     return -0.2*LB + 3;
+     return -1*LB + 2;
    }
 
 }
@@ -961,8 +873,13 @@ void autoFuzzySearch(int N, int P)
 
 
 double DTpar = (autoLoopData.at(autoLoopName).cTime - autoLoopData.at(autoLoopName).bestTime)/autoLoopData.at(autoLoopName).cTime*100;
-
+//printf("Ctime: %lf \n", autoLoopData.at(autoLoopName).cTime);
+//printf("Bestime: %lf \n", autoLoopData.at(autoLoopName).bestTime);
+//printf("DTpar:  %lf \n\n", DTpar);
 double Dlb = autoLoopData.at(autoLoopName).cLB - autoLoopData.at(autoLoopName).bestLB;
+
+//printf("cLB: %lf \n",autoLoopData.at(autoLoopName).cLB);
+//printf("bestLB: %lf \n", autoLoopData.at(autoLoopName).bestLB);
 
 double Tpar = autoLoopData.at(autoLoopName).cTime ; // current Tpar
 double LB = autoLoopData.at(autoLoopName).cLB; //current load imbalance
@@ -978,7 +895,7 @@ double DLSISMoreAggressive = 0;
 double DLSISLessAggressive = 0;
 double DLSISSame = 0;
 int selectedDLS;
-double UseChunk = 0;
+//double UseChunk = 0;
 
 
 
@@ -1000,28 +917,42 @@ if((autoLoopData.at(autoLoopName).bestLB == -1 ) && (autoLoopData.at(autoLoopNam
     DLSISAggressive = MAX(LBISHigh(LB), MIN(TparISLong(Tpar), LBISHigh(LB)));
 }
 else // ..........rules how to change current DLS smartly ...based on ΔDLS and ΔLB
-{
-// If DTparISMuchImproved and DlbISMuchImproved then use same DLS 
-// If DTparISImproved then then use same DLS and chunksize
+{ 
+// If DTparISImproved  then use chunksize
 // If DTparISDegraded and DlbISImproved then use chunksize
 // If LBISLow then DLSISSame
+// If DTparISImproved Then DLSISSame
+// If DTparISNoChange and DlbISNoChange then DLSISSame
+//
       //MAX(DTparISImproved(DTpar), MIN(DTparISDegraded(DTpar), DlbISImproved(Dlb))) >= 0.5 ? UseChunk = 1 : UseChunk = 0;
-      UseChunk = MAX(DTparISImproved(DTpar), MIN(DTparISDegraded(DTpar), DlbISImproved(Dlb)));
+      //UseChunk = MAX(DTparISImproved(DTpar), MIN(DTparISDegraded(DTpar), DlbISImproved(Dlb)));
      
-      DLSISSame = MAX(MIN(DTparISMuchImproved(DTpar),DlbISMuchImproved(Dlb)), DTparISImproved(DTpar));
+      DLSISSame = MIN(DTparISNoChange(DTpar),DlbISNoChange(Dlb));
       DLSISSame = MAX(DLSISSame, LBISLow(LB));
+      DLSISSame = MAX(DLSISSame, DTparISImproved(DTpar));
      
 // If DTparISDegraded and DlbISDegraded then use more aggressive DLS
+// If DTparISNoChange and DlbISDegraded then use more aggressive DLS
 // If LBISHigh then DLSISMoreAggressive
       DLSISMoreAggressive = MAX(LBISHigh(LB), MIN(DTparISDegraded(DTpar), DlbISDegraded(Dlb)));
-
-// If DTparISMuchDegraded and DlbISImproved then use less aggressive DLS and chunksize
-      DLSISLessAggressive = MIN(DTparISMuchDegraded(DTpar), DlbISImproved(Dlb));
+      DLSISMoreAggressive = MAX(DLSISMoreAggressive, MIN(DTparISNoChange(DTpar),DlbISDegraded(Dlb)));
      
+
+// If DTparISDegraded and DlbISImproved then use less aggressive DLS and chunksize
+// If DTparISDegraded and DlbISNoChange then use less aggressive DLS
+// If DTparISNoChange and DlbISImproved then use less aggressive DLS
+//
+      #if KMP_DEBUG
+      printf("DTPAR: %lf .. DTparISDegraded(DTpar): %lf \n", DTpar, DTparISDegraded(DTpar));
+      #endif
+      DLSISLessAggressive = MIN(DTparISDegraded(DTpar), DlbISImproved(Dlb));
+      //DLSISLessAggressive = MAX(DLSISLessAggressive, MIN(DTparISDegraded(DTpar),DlbISNoChange(Dlb)));
+      DLSISLessAggressive = MAX(DLSISLessAggressive, MIN(DTparISNoChange(DTpar), DlbISImproved(Dlb)));
+
       //if(MIN(DTparISMuchDegraded(DTpar), DlbISImproved(Dlb)) >= 0.5)  {UseChunk = 1;}
-      UseChunk = MAX(UseChunk, MIN(DTparISMuchDegraded(DTpar), DlbISImproved(Dlb)));
+      //UseChunk = MAX(UseChunk, MIN(DTparISDegraded(DTpar), DlbISImproved(Dlb)));
       
-       #if KMP_DEBUG
+      #if KMP_DEBUG
       printf("[ATUO] DLSISSAME: %lf, DLSISMoreAggressive: %lf, DLSISLessAggressive: %lf, UseChunk: %lf \n", DLSISSame, DLSISMoreAggressive, DLSISLessAggressive, UseChunk);
       #endif
 }
@@ -1034,14 +965,13 @@ else // ..........rules how to change current DLS smartly ...based on ΔDLS and 
 if((autoLoopData.at(autoLoopName).bestLB == -1 ) && (autoLoopData.at(autoLoopName).bestTime == -1) )
 {
 
-
-    /* STATIC, TSS, GSS_LLVM, GSS, static_steal, mFAC2, FAC2, WF, AWFB, AWFC, AWFD, AWFE, mAF, AF, SS */
-    /*     0     1       2      3      4           5      6    7   8     9     10     11   12  13  14 */
+    /* STATIC, TSS, GSS_LLVM, GSS, mFAC2, FAC2, static_steal, AWFB, AWFC, AWFD, AWFE, mAF, AF, SS */
+    /*     0     1       2      3      4     5       6         7   8   9    10     11   12  13  14 */
     /* |            Simple      |               Moderate  .    |   |   Aggressive                   | */
 
     // DLS
     //    
-    //    ^____       5______6      8________________14
+    //    ^____       2______4      7________________14
     // 1  |    \      /      \      /                | 
     //    |     \    /        \    /                 |
     //    |      \  /          \  /                  |
@@ -1050,15 +980,15 @@ if((autoLoopData.at(autoLoopName).bestLB == -1 ) && (autoLoopData.at(autoLoopNam
     //    |      /  \          /  \                  |
     //    |     /    \        /    \                 | 
     //  0 |-------------------------------------------->
-    //    0    2     3       6     7                 14
+    //    0    0.5     1      4     6                 14
 
 
     /* Calculate from the rules above the membership of each function*/
 
 
-    double DLSAgrgressiveArea = (((14-6) + (14-8))/2) * DLSISAggressive;
-    double DLSModerateArea = (( (7-2) + (6-5) )/2) * DLSISModerate;
-    double DLSSimpleArea = (((3-0) + (2-1) ) /2 ) * DLSISSimple;
+    double DLSAgrgressiveArea = (((14-4) + (14-7))/2) * DLSISAggressive;
+    double DLSModerateArea = (( (6-0.5) + (4-2) )/2) * DLSISModerate;
+    double DLSSimpleArea = (((1-0) + (1-0.5) ) /2 ) * DLSISSimple;
 
     double sumAreas = DLSAgrgressiveArea + DLSModerateArea + DLSSimpleArea;
 
@@ -1067,7 +997,7 @@ if((autoLoopData.at(autoLoopName).bestLB == -1 ) && (autoLoopData.at(autoLoopNam
     double DLSSimpleWeight = DLSSimpleArea / sumAreas;
 
 
-    selectedDLS = DLSAggressiveWeight*11 + DLSModerateWeight*2.5 + (1-DLSSimpleWeight)*3;
+    selectedDLS = DLSAggressiveWeight*14 + DLSModerateWeight*3 + (1-DLSSimpleWeight)*1;
 #if KMP_DEBUG
     printf("[Auto] AggressiveWeight: %lf \n ModerateWeight: %lf \n SimpleWeight: %lf \n SelectedDLS: %d \n", DLSAggressiveWeight, DLSModerateWeight, DLSSimpleWeight, selectedDLS);
 #endif
@@ -1100,7 +1030,7 @@ else
     double DLSMoreAggressiveWeight = DLSMoreAggressiveArea / sumAreas;
 
     double deltaDLS = DLSMoreAggressiveWeight*4 + DLSSameWeight*0 + DLSLessAggressiveWeight*-4;
-    selectedDLS = autoLoopData.at(autoLoopName).cDLS + deltaDLS;
+    selectedDLS = round(autoLoopData.at(autoLoopName).cDLS + deltaDLS);
 #if KMP_DEBUG
     printf("[Auto] MoreAggressiveWeight: %lf \n SameWeight: %lf \n LessAggressiveWeight: %lf \n DeltaDLS: %lf \n SelectedDLS: %d \n", DLSMoreAggressiveWeight, DLSSameWeight, DLSLessAggressiveWeight, deltaDLS, selectedDLS);
 #endif
@@ -1128,7 +1058,7 @@ autoLoopData.at(autoLoopName).searchTrials++;
 autoLoopData.at(autoLoopName).bestLB    = autoLoopData.at(autoLoopName).cLB;
 autoLoopData.at(autoLoopName).bestDLS   = autoLoopData.at(autoLoopName).cDLS;
 autoLoopData.at(autoLoopName).bestChunk = autoLoopData.at(autoLoopName).cChunk;
-
+autoLoopData.at(autoLoopName).bestTime    = autoLoopData.at(autoLoopName).cTime;
 
 
 //set new DLS
@@ -1138,20 +1068,17 @@ autoLoopData.at(autoLoopName).cDLS = selectedDLS;
 
 // Golden ratio = 0.618 - choose a chunk size in the "middle" between 1 and N/2P
 //
-// put limits on UseChunk between 0.4 and 0.6 
-if (UseChunk > 0.6)
-{
-    UseChunk = 0.6;
-}
-else if (UseChunk < 0.4)
-{
-   UseChunk = 0.4;
-}
-int mul = log2(N/P)*UseChunk; // UseChunk instead of the golden ratio
+
+// the higher the value , the lower the chunk size, therefore reverse the UseChunk value
+//UseChunk = 1 - UseChunk;
+//map the calculated value of chunk (UseChunk) between 0.3 and .7
+//UseChunk = 0.3 + UseChunk*0.4;
+
+int mul = log2(N/P)*0.618; // UseChunk instead of the golden ratio
 autoLoopData.at(autoLoopName).cChunk = (N)/((2<<mul)*P);
-#if KMP_DEBUG
- printf("[AUTO] UseChunk is ON ... chunksize: %d \n",  autoLoopData.at(autoLoopName).cChunk);
-#endif
+//#if KMP_DEBUG
+ //printf("[AUTO] UseChunk is %lf ... chunksize: %d \n",  UseChunk, autoLoopData.at(autoLoopName).cChunk);
+//#endif
       
 
 }
