@@ -112,29 +112,29 @@ std::unordered_map<std::string, LoopData > autoLoopData; //holds loop data
 // LB4OMP extended DLS portfolio ...scheduling techniques are ordered according to their overhead/scheduling/load balancing capacity
 std::vector<sched_type> autoDLSPortfolio{
   kmp_sch_static_chunked, // STATIC    ... 0
-  kmp_sch_trapezoidal, // TSS          ... 1
-  kmp_sch_guided_analytical_chunked,// ... 2 LLVM RTL original auto, which is guided with minimum chunk size
-  __kmp_guided, //                     ... 3 GSS
+  kmp_sch_dynamic_chunked,       //     ... 1 
+  kmp_sch_trapezoidal, // TSS          ... 2
+  kmp_sch_guided_analytical_chunked,// ... 3 LLVM RTL original auto, which is guided with minimum chunk size
+  kmp_sch_guided_iterative_chunked, //  ... 4 GSS
   //--------------LB4OMP_extensions----------
   //kmp_sch_fsc,  // requires profiling
   //kmp_sch_tap,  // requires profiling 
   //kmp_sch_fac,  // requires profiling
   //kmp_sch_faca, // requires profiling
-  kmp_sch_fac2a,                      //  ... 4
-  kmp_sch_fac2,                       //  ... 5
-  kmp_sch_static_steal,             // ... 6 static_steal
+  kmp_sch_fac2a,                      //  ... 5
+  kmp_sch_fac2,                       //  ... 6
+  kmp_sch_static_steal,             // ... 7 static_steal
   //kmp_sch_wf,                         //  not needed on homogeneous cores 
   //kmp_sch_bold,  // requires profiling
-  kmp_sch_awf_b,                      //  ... 7
-  kmp_sch_awf_c,                     //   ... 8
-  kmp_sch_awf_d,                    //   ... 9
-  kmp_sch_awf_e,                   //    ... 10
-  kmp_sch_af_a,                   //     ... 11
-  kmp_sch_af,                    //      ... 12
-  kmp_sch_dynamic_chunked       //       ... 13   SS  
+  kmp_sch_awf_b,                      //  ... 8
+  kmp_sch_awf_c,                     //   ... 9
+  kmp_sch_awf_d,                    //   ... 10
+  kmp_sch_awf_e,                   //    ... 11
+  kmp_sch_af_a,                   //     ... 12
+  kmp_sch_af,                    //      ... 13 
   }; 
 
-enum DLSPortfolio {STATIC, TSS, GSS_LLVM, GSS, mFAC2, FAC2, static_steal, AWFB, AWFC, AWFD, AWFE, mAF, AF, SS};
+enum DLSPortfolio {STATIC, SS, TSS, GSS_LLVM, GSS, mFAC2, FAC2, static_steal, AWFB, AWFC, AWFD, AWFE, mAF, AF};
 
 
 // ------------------------------------------ end Auto extension variables -------------------- 
@@ -602,41 +602,41 @@ double DlbISNoChange(double deltaLB)
 //             /  \      |      /  \
 //            /    \     |     /    \
 //  <--------------------|---------------------->
-//           -2    -1    0     1    2           (%)
+//          -1   -0.5    0    0.5    1           (%)
 
 
 
 double DTparISNoChange(double DTpar)
 {
 
-     if ((DTpar < -2) || (DTpar > 2) )
+     if ((DTpar < -1) || (DTpar > 1) )
      {
         return 0;
      }
-     else if ((DTpar >= -2) && (DTpar <= -1))
+     else if ((DTpar >= -1) && (DTpar <= -0.5))
      {
-         return DTpar + 2;
+         return 2*DTpar + 2;
      }
-     else if ((DTpar >= -1) && (DTpar <= 1))
+     else if ((DTpar >= -0.5) && (DTpar <= 0.5))
      {
         return 1;
      }
-     else if ((DTpar > 1) && (DTpar < 2))
+     else if ((DTpar > 0.5) && (DTpar < 1))
      {
-        return -1*DTpar + 2;
+        return -2*DTpar + 2;
      }
 }
 
 double DTparISDegraded(double DTpar)
 {
 
-     if ((DTpar < 1) )
+     if ((DTpar < 0.5) )
      {
         return 0;
      }
-     else if ((DTpar <= 3) && (DTpar >= 1))
+     else if ((DTpar <= 3) && (DTpar >= 0.5))
      {
-         return 0.5*DTpar - 0.5;
+         return 0.4*DTpar - 0.2;
      }
      else if ((DTpar >= 3))
      {
@@ -649,13 +649,13 @@ double DTparISDegraded(double DTpar)
 double DTparISImproved(double DTpar)
 {
 
-     if ((DTpar > -1) )
+     if ((DTpar > -0.5) )
      {
         return 0;
      }
-     else if ((DTpar >= -3) && (DTpar <= -1))
+     else if ((DTpar >= -3) && (DTpar <= -0.5))
      {
-         return -0.5*DTpar - 0.5;
+         return -0.4*DTpar - 0.2;
      }
      else if ((DTpar <= -3))
      {
@@ -809,9 +809,9 @@ double LBISLow(double LB)
 
 }
 
-/* STATIC, TSS, GSS_LLVM, GSS, static_steal, mFAC2, FAC2, WF, AWFB, AWFC, AWFD, AWFE, mAF, AF, SS */
-/*     0     1       2      3      4           5      6    7   8     9     10     11   12  13  14 */
-/* |            Simple      |               Moderate  .    |   |   Aggressive                   | */
+/* STATIC, TSS, GSS_LLVM, GSS, static_steal, mFAC2, FAC2, AWFB, AWFC, AWFD, AWFE, mAF, AF, SS */
+/*     0     1       2      3      4           5      6    7   8     9     10     11   12  13 */
+/* |            Simple      |               Moderate  .    |   |   Aggressive               | */
 
 // DLS
 //    
@@ -946,7 +946,7 @@ else // ..........rules how to change current DLS smartly ...based on ΔDLS and 
       printf("DTPAR: %lf .. DTparISDegraded(DTpar): %lf \n", DTpar, DTparISDegraded(DTpar));
       #endif
       DLSISLessAggressive = MIN(DTparISDegraded(DTpar), DlbISImproved(Dlb));
-      //DLSISLessAggressive = MAX(DLSISLessAggressive, MIN(DTparISDegraded(DTpar),DlbISNoChange(Dlb)));
+      DLSISLessAggressive = MAX(DLSISLessAggressive, MIN(DTparISDegraded(DTpar),DlbISNoChange(Dlb)));
       DLSISLessAggressive = MAX(DLSISLessAggressive, MIN(DTparISNoChange(DTpar), DlbISImproved(Dlb)));
 
       //if(MIN(DTparISMuchDegraded(DTpar), DlbISImproved(Dlb)) >= 0.5)  {UseChunk = 1;}
