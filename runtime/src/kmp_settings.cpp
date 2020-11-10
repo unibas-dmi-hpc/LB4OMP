@@ -3733,6 +3733,8 @@ static const char *__kmp_parse_single_omp_schedule(const char *name,
     sched = kmp_sch_profiling;
   else if (!__kmp_strcasecmp_with_sentinel("awf", ptr, *delim)) /* AWF */
     sched = kmp_sch_awf;
+  else if(!__kmp_strcasecmp_with_sentinel("pls", ptr, *delim)) /*PLS*/
+    sched = kmp_sch_pls;
     //--------------------LB4OMP_extensions--------------------------
 #if KMP_STATIC_STEAL_ENABLED
   else if (!__kmp_strcasecmp_with_sentinel("static_steal", ptr, *delim))
@@ -3886,6 +3888,9 @@ static void __kmp_stg_print_omp_schedule(kmp_str_buf_t *buffer,
       break;
     case kmp_sch_awf:
       __kmp_str_buf_print(buffer, "%s,%d'\n", "awf", __kmp_chunk);
+      break;
+    case kmp_sch_pls:
+      __kmp_str_buf_print(buffer, "%s,%d'\n", "pls", __kmp_chunk);		
       break;
       //---------------LB4OMP_extensions----------------------
     case kmp_sch_static:
