@@ -309,7 +309,12 @@ void init_loop_timer(const char* loopLine, long ub){
 void autoSetChunkSize(int N, int P)
 {
 
-int golden = atoi(std::getenv("KMP_Golden_Chunksize"));
+int golden = 0;
+
+if (std::getenv("KMP_Golden_Chunksize") != NULL)
+{
+ golden = atoi(std::getenv("KMP_Golden_Chunksize"));
+}
 
 if (golden)
 {
@@ -473,15 +478,16 @@ void autoBinarySearch(int N, int P)
 void autoRandomSearch(int N, int P)
 {
 
-      double currentLoadImbalance =  autoLoopData.at(autoLoopName).cLB/100;
-      double jumpProbability = 1 - currentLoadImbalance ;
+      double currentLoadImbalance =  autoLoopData.at(autoLoopName).cLB/100; 
+      double jumpProbability = currentLoadImbalance*10; //if LB is greater than 10 ... jump anyway
       
       double randomNum;
    
       // if first time to enter this function
       if(autoLoopData.at(autoLoopName).searchTrials == 0)
       {
-          srand(currentLoadImbalance); 
+          srand(currentLoadImbalance);
+          jumpProbability = 2.0; //always jump at the first entry 
       }
 
       // random number between 0 and 1
@@ -510,8 +516,6 @@ void autoRandomSearch(int N, int P)
       autoLoopData.at(autoLoopName).searchTrials++;
 
 }
-
-
 
 
 // Membership functions for ΔLB
