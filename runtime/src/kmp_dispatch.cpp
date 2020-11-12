@@ -122,7 +122,7 @@ std::vector<sched_type> autoDLSPortfolio{
   //kmp_sch_fac,  // requires profiling
   //kmp_sch_faca, // requires profiling
   kmp_sch_fac2a,                      //  ... 5
-  kmp_sch_fac2,                       //  ... 6
+ // kmp_sch_fac2,                       //  ... 6
   kmp_sch_static_steal,             // ... 7 static_steal
   //kmp_sch_wf,                         //  not needed on homogeneous cores 
   //kmp_sch_bold,  // requires profiling
@@ -131,10 +131,10 @@ std::vector<sched_type> autoDLSPortfolio{
   kmp_sch_awf_d,                    //   ... 10
   kmp_sch_awf_e,                   //    ... 11
   kmp_sch_af_a,                   //     ... 12
-  kmp_sch_af,                    //      ... 13 
+  //kmp_sch_af,                    //      ... 13 
   }; 
 
-enum DLSPortfolio {STATIC, SS, TSS, GSS_LLVM, GSS, mFAC2, FAC2, static_steal, AWFB, AWFC, AWFD, AWFE, mAF, AF};
+enum DLSPortfolio {STATIC, SS, TSS, GSS_LLVM, GSS, mFAC2, static_steal, AWFB, AWFC, AWFD, AWFE, mAF};
 
 
 // ------------------------------------------ end Auto extension variables -------------------- 
@@ -668,16 +668,16 @@ double DTparISImproved(double DTpar)
 
 // Tpar
 //    
-//    ^____           ______       _____
-// 1  |    \         /      \     /
-//    |     \       /        \   /
-//    |      \     /          \ /
-//    |       \   /            /
-//    |Short   \ /   Medium   / \  Long
-//    |         /            /   \
-//    |        / \          /     \
+//    ^____         ________       _____
+// 1  |    \       /        \     /
+//    |     \    /           \   /
+//    |      \ /              \ /
+//    |      /\                /
+//    |Short   \     Medium   / \  Long
+//    |   /     \            /   \
+//    | /        \          /     \
 //  0 |------------------------------>
-//    0     0.07 0.1        1     10
+//    0   0.01  0.03        1     10
 
 
 double TparISLong(double Tpar)
@@ -700,13 +700,13 @@ double TparISLong(double Tpar)
 double TparISMedium(double Tpar)
 {
 
-   if((Tpar < 0.07) || (Tpar > 10))
+   if((Tpar < 0) || (Tpar > 10))
    {
      return 0;
    }
-   else if((Tpar >= 0.07) && (Tpar < 0.1))
+   else if((Tpar >= 0) && (Tpar < 0.1))
    {
-      return 33*Tpar - 2.31; 
+      return 10*Tpar ; 
    }
    else if ((Tpar >= 0.1) && (Tpar <= 1.0))
    {
@@ -723,17 +723,17 @@ double TparISMedium(double Tpar)
 double TparISShort(double Tpar)
 {
 
-   if(Tpar <= 0.07)
+   if(Tpar <= 0.01)
    {
      return 1;
    }
-   else if( Tpar >= 0.1)
+   else if( Tpar >= 0.03)
    {
      return 0;
    }
-   else // between 0.07 and 0.1
+   else // between 0.01 and 0.03
    {
-     return -33*Tpar + 3.3;
+     return -50*Tpar + 1.5;
    }
 
 }
@@ -881,7 +881,7 @@ double Dlb = autoLoopData.at(autoLoopName).cLB - autoLoopData.at(autoLoopName).b
 //printf("cLB: %lf \n",autoLoopData.at(autoLoopName).cLB);
 //printf("bestLB: %lf \n", autoLoopData.at(autoLoopName).bestLB);
 
-double Tpar = autoLoopData.at(autoLoopName).cTime ; // current Tpar
+double Tpar = autoLoopData.at(autoLoopName).cTime/1000 ; // current Tpar in seconds
 double LB = autoLoopData.at(autoLoopName).cLB; //current load imbalance
 
 //printf("[AUTO] Tpar: %lf , LB: %lf \n", Tpar, LB);
@@ -909,12 +909,12 @@ if((autoLoopData.at(autoLoopName).bestLB == -1 ) && (autoLoopData.at(autoLoopNam
     DLSISSimple = MAX(TparISShort(Tpar), LBISLow(LB));
 
     // If LBISModerate then use moderate DLS
-    // If TparISShort and LBISHigh then use moderate DLS and chunksize
-    DLSISModerate = MAX(LBISModerate(LB),MIN(TparISShort(Tpar),LBISHigh(LB)));
+    // If TparISShort or TparISMedium and LBISHigh then use moderate DLS and chunksize
+    DLSISModerate = MAX(LBISModerate(LB),MIN(MAX(TparISShort(Tpar), TparISMedium(Tpar)),LBISHigh(LB)));
 
-    // If LBISHigh then use aggressive DLS
-    // If TparISLong and LBISHigh then use aggressive DLS
-    DLSISAggressive = MAX(LBISHigh(LB), MIN(TparISLong(Tpar), LBISHigh(LB)));
+    
+    // If TparISLong  and LBISHigh then use aggressive DLS
+    DLSISAggressive = MIN(LBISHigh(LB), TparISLong(Tpar));
 }
 else // ..........rules how to change current DLS smartly ...based on ΔDLS and ΔLB
 { 
@@ -934,7 +934,8 @@ else // ..........rules how to change current DLS smartly ...based on ΔDLS and 
 // If DTparISDegraded and DlbISDegraded then use more aggressive DLS
 // If DTparISNoChange and DlbISDegraded then use more aggressive DLS
 // If LBISHigh then DLSISMoreAggressive
-      DLSISMoreAggressive = MAX(LBISHigh(LB), MIN(DTparISDegraded(DTpar), DlbISDegraded(Dlb)));
+      DLSISMoreAggressive = MIN(LBISHigh(LB),  TparISLong(Tpar));
+      DLSISMoreAggressive = MAX(DLSISMoreAggressive, MIN(DTparISDegraded(DTpar), DlbISDegraded(Dlb)));
       DLSISMoreAggressive = MAX(DLSISMoreAggressive, MIN(DTparISNoChange(DTpar),DlbISDegraded(Dlb)));
      
 
@@ -948,7 +949,9 @@ else // ..........rules how to change current DLS smartly ...based on ΔDLS and 
       DLSISLessAggressive = MIN(DTparISDegraded(DTpar), DlbISImproved(Dlb));
       DLSISLessAggressive = MAX(DLSISLessAggressive, MIN(DTparISDegraded(DTpar),DlbISNoChange(Dlb)));
       DLSISLessAggressive = MAX(DLSISLessAggressive, MIN(DTparISNoChange(DTpar), DlbISImproved(Dlb)));
-
+      DLSISLessAggressive = MAX(DLSISLessAggressive, TparISShort(Tpar));
+      DLSISLessAggressive = MAX(DLSISLessAggressive, MIN(DTparISDegraded(DTpar), LBISLow(LB)));
+      //printf("Tpar: %lf, is short: %lf \n", Tpar, TparISShort(Tpar));
       //if(MIN(DTparISMuchDegraded(DTpar), DlbISImproved(Dlb)) >= 0.5)  {UseChunk = 1;}
       //UseChunk = MAX(UseChunk, MIN(DTparISDegraded(DTpar), DlbISImproved(Dlb)));
       
