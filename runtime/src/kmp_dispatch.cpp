@@ -306,25 +306,34 @@ void init_loop_timer(const char* loopLine, long ub){
 //  University of Basel, Switzerland
 //  -------------------------------------------------------------------------------------------------------//
 
+int goldenChunkSize(int N, int P)
+{
+
+  int golden = 0;
+  int chunkSize = 0;
+
+  if (std::getenv("KMP_Golden_Chunksize") != NULL)
+  {
+      golden = atoi(std::getenv("KMP_Golden_Chunksize"));
+  }
+
+  if (golden)
+  {
+   // Golden ratio = 0.618 - choose a chunk size in the "middle" between 1 and N/2P
+    int mul = log2(N/P)*0.618; // Use golden ratio
+    chunkSize = (N)/((2<<mul)*P);
+  }
+
+  return chunkSize;
+
+}
+
+
+
 void autoSetChunkSize(int N, int P)
 {
 
-int golden = 0;
-
-if (std::getenv("KMP_Golden_Chunksize") != NULL)
-{
- golden = atoi(std::getenv("KMP_Golden_Chunksize"));
-}
-
-if (golden)
-{
-   // Golden ratio = 0.618 - choose a chunk size in the "middle" between 1 and N/2P
-   int mul = log2(N/P)*0.618; // Use golden ratio
-   autoLoopData.at(autoLoopName).cChunk = (N)/((2<<mul)*P);
-}
-else // default
-{
-  //Setting chunk size
+  //Setting default chunk size
   if (autoLoopData.at(autoLoopName).cDLS == STATIC) // STATIC
   {
     autoLoopData.at(autoLoopName).cChunk = N/P;
@@ -337,8 +346,6 @@ else // default
   {
     autoLoopData.at(autoLoopName).cChunk = 1;
   }
-
-}
 
 }
 
@@ -1071,7 +1078,7 @@ autoLoopData.at(autoLoopName).bestTime    = autoLoopData.at(autoLoopName).cTime;
 //set new DLS
 autoLoopData.at(autoLoopName).cDLS = selectedDLS;
 
-//UseChunk
+//UseChunk --All DLS will use the goldenChunksize Env. Variable
 
 // Golden ratio = 0.618 - choose a chunk size in the "middle" between 1 and N/2P
 //
@@ -1081,8 +1088,8 @@ autoLoopData.at(autoLoopName).cDLS = selectedDLS;
 //map the calculated value of chunk (UseChunk) between 0.3 and .7
 //UseChunk = 0.3 + UseChunk*0.4;
 
-int mul = log2(N/P)*0.618; // UseChunk instead of the golden ratio
-autoLoopData.at(autoLoopName).cChunk = (N)/((2<<mul)*P);
+//int mul = log2(N/P)*0.618; // UseChunk instead of the golden ratio
+//autoLoopData.at(autoLoopName).cChunk = (N)/((2<<mul)*P);
 //#if KMP_DEBUG
  //printf("[AUTO] UseChunk is %lf ... chunksize: %d \n",  UseChunk, autoLoopData.at(autoLoopName).cChunk);
 //#endif
@@ -1139,8 +1146,10 @@ void auto_DLS_Search(int N, int P, int option)
     }
     else if (option == 4)
     {
-        // set DLS and chunk size
+        // set DLS
         autoFuzzySearch(N, P);
+        // set chunk size
+        autoSetChunkSize(N, P);
     }
     else //normal LLVM auto
     {
@@ -1590,8 +1599,7 @@ void __kmp_dispatch_init_algorithm(ident_t *loc, int gtid,
     }
   }
 
- // update global_chunk value for printing
- global_chunk = chunk;
+
 
 // AUTO by Ali
     if(AUTO_FLAG)
@@ -1656,6 +1664,23 @@ void __kmp_dispatch_init_algorithm(ident_t *loc, int gtid,
     } //end auto flag
 
 
+//check autogoldenchunk
+
+int goldenChunk = goldenChunkSize(tc,nproc);
+
+
+if (goldenChunk) // if it is set
+{
+  // set chunk equal to goldenchunk
+   chunk = goldenChunk;
+   pr->u.p.min_chunk = chunk;
+   pr->u.p.parm1 = chunk;
+
+}
+
+
+ // update global_chunk value for printing
+ global_chunk = chunk;
   
 
 
