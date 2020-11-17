@@ -351,7 +351,7 @@ typedef enum kmp_sched {
   kmp_sched_af_a = 116, // mapped to kmp_sch_af_a (61)
   kmp_sched_profiling = 117, // mapped to kmp_sch_profiling (62)
   kmp_sched_awf = 118, // mapped to kmp_sch_awf (63)
-  kmp_sched_pls=119, // mapped to kmp_sch_pls (64)
+  kmp_sched_pls=119, // mapped to kmp_sch_pls (72)
   //--------------LB4OMP_extensions----------------
   kmp_sched_upper,
   kmp_sched_default = kmp_sched_static // default scheduling
@@ -405,7 +405,7 @@ enum sched_type : kmp_int32 {
   kmp_sch_af_a = 61,
   kmp_sch_profiling = 62,
   kmp_sch_awf = 63,
-  kmp_sch_pls= 64,
+  kmp_sch_pls=72,
   //--------------LB4OMP_extensions----------------
 
   /* accessible only through KMP_SCHEDULE environment variable */

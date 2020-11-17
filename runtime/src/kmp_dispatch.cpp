@@ -65,6 +65,9 @@ std::chrono::high_resolution_clock::time_point timeInit;
 std::chrono::high_resolution_clock::time_point timeEnd;
 std::unordered_map<std::string, std::vector<double> > means_sigmas;
 
+//----------------- pls data---------------
+//std::atomic<T> scheduled_iterations = 0;
+
 // ------------------------------------- AWF data -----------------------------------------------------
 typedef struct 
 {
@@ -84,7 +87,6 @@ const char* cLoopName; //current loop name
 std::atomic<int> AWFEnter = 0;
 std::atomic<int> AWFWait = 1;
 std::atomic<int> AWFCounter = 0;
-
 // ...........................................................................................................
 
 std::unordered_map<std::string, std::atomic<int> > current_index; //current+1 for mean
@@ -1195,6 +1197,15 @@ LOOP_TIME_MEASURE_START
     pr->u.p.dbl_parm2 = dbl_parm2;
   } // case
   break;
+  case kmp_sch_pls: {
+     /* performance-based loop scheduling it divides the entire space into two parts
+      one part to be assigned statically and the other part will be assigned dynamically and following as in gss*/
+      KD_TRACE(100, ("__kmp_dispatch_init_algorithm: T#%d kmp_sch_pls case\n", gtid));
+      //P =(ST) nproc; // number of threads
+      int static_part=(int)ceil(tc*0.5/nproc); // hard coded for the moment
+      pr->u.p.parm1 = static_part;
+      pr->u.p.parm2 = chunk; // minimum chunk size
+  }
   case kmp_sch_awf: {
     /* Adaptive Weighted Factoring same as WF but adaptive for time-stepping applications */
     //set the loop name
@@ -3247,7 +3258,7 @@ if((int)tid == 0){
 
     // atomically increase factoring counter
     counter = test_then_inc<ST>((volatile ST *)&sh->u.s.counter);
-
+    printf("min chunk %d\n", min_chunk);
     // calculate current batch index
     batch = counter / nproc;
 
@@ -3390,7 +3401,7 @@ if((int)tid == 0){
     KD_TRACE(100, ("__kmp_dispatch_next_algorithm: T#%d kmp_sch_wf case\n",
                    gtid));
     trip = pr->u.p.tc;
-
+    printf("min chunk %d\n", min_chunk);
     // atomically increase factoring counter
     counter = test_then_inc<ST>((volatile ST *)&sh->u.s.counter);
 
@@ -3463,6 +3474,60 @@ if((int)tid == 0){
     
   } // case
   break;
+ case kmp_sch_pls:{
+ 	ST static_part= (ST)pr->u.p.parm1; // static part;
+	ST  min_chunk = (ST) pr->u.p.parm2; // minimum chunk size
+	ST counter = (ST) test_then_inc<ST>((volatile ST *)&sh->u.s.counter);
+	ST total_threads= (ST)nproc;
+	ST calculated_chunk=0;
+	ST total_iterations=pr->u.p.tc;
+	KD_TRACE(100, ("__kmp_dispatch_next_algorithm: T#%d kmp_sch_pls case\n",gtid));
+	if(counter >= total_threads)
+	{
+		//follow gss
+		calculated_chunk=1;
+	}
+	else
+	{
+		//follow static
+		calculated_chunk=static_part;	
+	}
+	if(calculated_chunk < min_chunk)
+		calculated_chunk = min_chunk;
+	//printf("calculated chunk %d\n", calculated_chunk);
+	ST start_index =test_then_add<ST>(RCAST(volatile ST *, &sh->u.s.iteration), (ST)calculated_chunk); 
+	ST end_index = calculated_chunk+start_index-1;
+	if(end_index > total_iterations-1)
+		end_index=total_iterations-1;
+	//printf("start %d end %d calculated chunk %d\n", start_index, end_index, calculated_chunk);
+	if(start_index <= end_index)
+	{
+		status=1;
+		init=start_index;
+		limit=end_index;
+		start = pr->u.p.lb;
+      		incr = pr->u.p.st;
+      		if (p_st != nullptr)
+        		*p_st = incr;
+      		*p_lb = start_index; 
+      		*p_ub = end_index;
+		printf("start %d end %d\n", *p_lb, *p_ub);
+      		if (pr->flags.ordered) {
+        		pr->u.p.ordered_lower = init;
+        		pr->u.p.ordered_upper = limit;
+		}
+	}
+	else
+	{
+		status=0;
+		printf("end***********\n");
+		*p_lb = 0;
+      		*p_ub = 0;
+      		if (p_st != nullptr)
+        		*p_st = 0;
+	}
+ }
+break;
  case kmp_sch_awf: {
     UT counter; // factoring counter
     UT batch; // batch index
