@@ -2937,6 +2937,9 @@ void __kmp_get_schedule(int gtid, kmp_sched_t *kind, int *chunk) {
   case kmp_sch_tfss:
     *kind = kmp_sched_tfss;
     break;
+  case kmp_sch_mfsc:
+    *kind = kmp_sched_mfsc;
+    break;
     //----------------LB4OMP_extensions-------------------
 #if KMP_STATIC_STEAL_ENABLED
   case kmp_sch_static_steal:

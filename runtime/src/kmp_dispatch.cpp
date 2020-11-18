@@ -1195,6 +1195,19 @@ LOOP_TIME_MEASURE_START
     pr->u.p.dbl_parm2 = dbl_parm2;
   } // case
   break;
+case kmp_sch_mfsc:{
+	/* modified */
+        KD_TRACE(100, ("__kmp_dispatch_init_algorithm: T#%d kmp_sch_mfsc case\n", gtid));
+	int temp = (tc+nproc-1)/nproc;
+    	int chunk_mfsc = (int) (0.55+temp*log(2.0)/log((1.0*temp)));
+         if(chunk<=0)
+                chunk=1;
+	if(chunk_mfsc<chunk)
+		chunk_mfsc= chunk;
+	pr->u.p.parm1 = chunk_mfsc;
+}
+
+break;
 case kmp_sch_tfss:{
 	/* trapezoid factoring self-scheduling*/
 	KD_TRACE(100, ("__kmp_dispatch_init_algorithm: T#%d kmp_sch_tfss case\n", gtid));
@@ -3496,6 +3509,43 @@ if((int)tid == 0){
     
   } // case
   break;
+case kmp_sch_mfsc:{
+	KD_TRACE(100, ("__kmp_dispatch_next_algorithm: T#%d kmp_sch_mfsc case\n",gtid));
+	ST calculated_chunk = (ST) pr->u.p.parm1;
+	ST start_index =test_then_add<ST>(RCAST(volatile ST *, &sh->u.s.iteration), (ST)calculated_chunk);
+        ST end_index = calculated_chunk+start_index-1;
+	ST total_iterations = (ST) pr->u.p.tc;
+        if(end_index > total_iterations-1)
+                end_index=total_iterations-1;
+	if(start_index <= end_index)
+        {
+                status=1;
+                init=start_index;
+                limit=end_index;
+                start = pr->u.p.lb;
+                incr = pr->u.p.st;
+                if (p_st != nullptr)
+                        *p_st = incr;
+                *p_lb = start_index;
+                *p_ub = end_index;
+                //printf("start %d end %d\n", *p_lb, *p_ub);
+                if (pr->flags.ordered) {
+                        pr->u.p.ordered_lower = init;
+                        pr->u.p.ordered_upper = limit;
+                }
+        }
+        else
+        {
+                status=0;
+                //printf("end***********\n");
+                *p_lb = 0;
+                *p_ub = 0;
+                if (p_st != nullptr)
+                        *p_st = 0;
+        }
+	
+}
+break;
 case kmp_sch_tfss:{
 	KD_TRACE(100, ("__kmp_dispatch_next_algorithm: T#%d kmp_sch_tfss case\n",gtid));
 	ST tss_chunk = (ST) pr->u.p.parm1;
