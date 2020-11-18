@@ -245,6 +245,7 @@ enum sched_type __kmp_sch_map[kmp_sched_upper - kmp_sched_lower_ext +
     kmp_sch_profiling, // ==> kmp_sch_profiling          = 117
     kmp_sch_awf, // ==> kmp_sch_awf          = 118
     kmp_sch_pls, // ==> kmp_sch_pls 	= 119
+    kmp_sch_tfss, // ==> kmp_sch_tfss   = 120
     //--------------LB4OMP_extensions----------------
     // will likely not be used, introduced here just to debug the code
     // of public intel extension schedules

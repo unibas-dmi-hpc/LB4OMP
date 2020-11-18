@@ -65,8 +65,6 @@ std::chrono::high_resolution_clock::time_point timeInit;
 std::chrono::high_resolution_clock::time_point timeEnd;
 std::unordered_map<std::string, std::vector<double> > means_sigmas;
 
-//----------------- pls data---------------
-//std::atomic<T> scheduled_iterations = 0;
 
 // ------------------------------------- AWF data -----------------------------------------------------
 typedef struct 
@@ -1197,6 +1195,21 @@ LOOP_TIME_MEASURE_START
     pr->u.p.dbl_parm2 = dbl_parm2;
   } // case
   break;
+case kmp_sch_tfss:{
+	/* trapezoid factoring self-scheduling*/
+	KD_TRACE(100, ("__kmp_dispatch_init_algorithm: T#%d kmp_sch_tfss case\n", gtid));
+	double tss_chunk = ceil((double) tc / ((double) 2*nproc)); 
+        double steps  = ceil(2.0*tc/(tss_chunk+1)); //n=2N/f+l
+        double tss_delta = (double) (tss_chunk - 1)/(double) (steps-1);
+	pr->u.p.parm1 = tss_chunk;
+	pr->u.p.parm2 = tss_delta;
+	 if(chunk<=0)
+                chunk=1;
+	pr->u.p.parm3 = chunk;
+	pr->u.p.parm4 = (ceil(2.0*tc/(tss_chunk+1)))-1;
+	
+}
+break;
   case kmp_sch_pls: {
      /* performance-based loop scheduling it divides the entire space into two parts
       one part to be assigned statically and the other part will be assigned dynamically and following as in gss*/
@@ -1208,6 +1221,8 @@ LOOP_TIME_MEASURE_START
       //P =(ST) nproc; // number of threads
       int static_part=(int)ceil(tc*ratio/nproc); // hard coded for the moment
       pr->u.p.parm1 = static_part;
+	if(chunk<=0)
+		chunk=1;
       pr->u.p.parm2 = chunk; // minimum chunk size
       pr->u.p.parm3=ratio;
      // printf("minimum is %d ratio %lf static part %d\n",pr->u.p.parm2, ratio,static_part );
@@ -3481,6 +3496,72 @@ if((int)tid == 0){
     
   } // case
   break;
+case kmp_sch_tfss:{
+	KD_TRACE(100, ("__kmp_dispatch_next_algorithm: T#%d kmp_sch_tfss case\n",gtid));
+	ST tss_chunk = (ST) pr->u.p.parm1;
+	ST tss_delta = (ST) pr->u.p.parm2;
+	ST min_chunk = (ST) pr->u.p.parm3;
+	ST steps = (ST) pr->u.p.parm4;
+	ST total_threads= (ST) nproc;
+	ST total_iterations = (ST) pr->u.p.tc;
+	ST accum_chunk= 0;
+	ST calculated_chunk=0;
+	ST counter = (ST) test_then_inc<ST>((volatile ST *)&sh->u.s.counter);
+	counter = (int)counter /(int)total_threads;
+        ST temp_chunk= (tss_chunk - ((counter) * total_threads* tss_delta ));
+	if(temp_chunk >= 0)
+        {
+                calculated_chunk = temp_chunk ;
+        }
+	else
+	{
+                calculated_chunk = tss_chunk - (steps  * tss_delta);
+	}
+	temp_chunk=calculated_chunk;
+	accum_chunk=temp_chunk;
+	for(int i=1; i<total_threads;i++)
+        {       
+
+                    accum_chunk+=temp_chunk- tss_delta;
+                    temp_chunk-=tss_delta;
+        }
+        accum_chunk/=total_threads;
+        calculated_chunk=ceil(accum_chunk);
+	if(calculated_chunk < min_chunk)
+                calculated_chunk = min_chunk;
+      	ST start_index =test_then_add<ST>(RCAST(volatile ST *, &sh->u.s.iteration), (ST)calculated_chunk);
+        ST end_index = calculated_chunk+start_index-1;
+        if(end_index > total_iterations-1)
+                end_index=total_iterations-1;
+//      printf("start %d end %d calculated chunk %d\n", start_index, end_index, calculated_chunk);
+        if(start_index <= end_index)
+        {
+                status=1;
+                init=start_index;
+                limit=end_index;
+                start = pr->u.p.lb;
+                incr = pr->u.p.st;
+                if (p_st != nullptr)
+                        *p_st = incr;
+                *p_lb = start_index;
+                *p_ub = end_index;
+                //printf("start %d end %d\n", *p_lb, *p_ub);
+                if (pr->flags.ordered) {
+                        pr->u.p.ordered_lower = init;
+                        pr->u.p.ordered_upper = limit;
+                }
+        }
+        else
+        {
+                status=0;
+                //printf("end***********\n");
+                *p_lb = 0;
+                *p_ub = 0;
+                if (p_st != nullptr)
+                        *p_st = 0;
+        } 
+}
+break;
  case kmp_sch_pls:{
  	ST static_part= (ST)pr->u.p.parm1; // static part;
 	ST  min_chunk = (ST)pr->u.p.parm2; // minimum chunk size
