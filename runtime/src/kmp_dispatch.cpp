@@ -1195,6 +1195,20 @@ LOOP_TIME_MEASURE_START
     pr->u.p.dbl_parm2 = dbl_parm2;
   } // case
   break;
+case kmp_sch_rnd:{
+	/* random between start_range or (1)   and min_chunk*/
+	 KD_TRACE(100, ("__kmp_dispatch_init_algorithm: T#%d kmp_sch_rnd case\n", gtid));
+	int start_range=1;
+        if(getenv("KMP_RND_START") !=NULL)
+		start_range=atoi(getenv("KMP_RND_START"));
+	if(chunk>0)
+		 pr->u.p.parm2=chunk;
+	else
+		 pr->u.p.parm2 = tc-1;
+
+	 pr->u.p.parm1= start_range;
+}
+break;
 case kmp_sch_viss:{
         /* variable increase size chunk*/
         KD_TRACE(100, ("__kmp_dispatch_init_algorithm: T#%d kmp_sch_viss case\n", gtid));
@@ -3539,9 +3553,49 @@ if((int)tid == 0){
     
   } // case
   break;
+case kmp_sch_rnd:{
+        KD_TRACE(100, ("__kmp_dispatch_next_algorithm: T#%d kmp_sch_rnd case\n",gtid));
+        int start_range =(int)pr->u.p.parm1;
+	int min_chunk = (int)pr->u.p.parm2;
+ 	ST total_iterations = (ST) pr->u.p.tc;
+	unsigned int seed= (unsigned int) time(NULL)*gtid;
+	int calculated_chunk=(rand_r(&seed)%(min_chunk-start_range+1))+start_range;
+   	ST start_index =test_then_add<ST>(RCAST(volatile ST *, &sh->u.s.iteration), (ST)calculated_chunk);
+        ST end_index = calculated_chunk+start_index-1;
+        if(end_index > total_iterations-1)
+                end_index=total_iterations-1;
+        if(start_index <= end_index)
+        {
+                status=1;
+                init=start_index;
+                limit=end_index;
+                start = pr->u.p.lb;
+                incr = pr->u.p.st;
+                if (p_st != nullptr)
+                        *p_st = incr;
+                *p_lb = start_index;
+                *p_ub = end_index;
+                //printf("start %d end %d\n", *p_lb, *p_ub);
+                if (pr->flags.ordered) {
+                        pr->u.p.ordered_lower = init;
+                        pr->u.p.ordered_upper = limit;
+                }
+        }
+        else
+        {
+                status=0;
+                //printf("end***********\n");
+                *p_lb = 0;
+                *p_ub = 0;
+                if (p_st != nullptr)
+                        *p_st = 0;
+        }
+	
+	
+}
+break;
 case kmp_sch_viss:{
         KD_TRACE(100, ("__kmp_dispatch_next_algorithm: T#%d kmp_sch_viss case\n",gtid));
-	//printf("viss");
         ST viss_constant=pr->u.p.parm1;
         ST total_iterations = (ST) pr->u.p.tc;
         ST total_threads= (ST)nproc;
