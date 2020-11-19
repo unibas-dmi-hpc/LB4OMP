@@ -146,8 +146,8 @@ std::unordered_map<std::string, std::vector<double> > means_sigmas;
 typedef struct 
 {
 int timeStep;
-std::vector<int> workPerStep;
-std::vector<int> sumWorkPerStep;
+std::vector<double> workPerStep;
+std::vector<double> sumWorkPerStep;
 std::vector<double> executionTimes;
 std::vector<double> sumExecutionTimes;
 std::vector<double> weights;
@@ -1276,11 +1276,16 @@ void print_loop_timer(enum sched_type schedule) //modified to take the schedule 
 
             std::string DLS[70];
             DLS[33] = "STATIC";
+            DLS[34] = "static unspecialized";
             DLS[35] = "SS";
             DLS[39] = "TSS"; 
+            DLS[40] = "static_greedy";
+            DLS[41] = "static_balanced";
             DLS[42] = "GSS";
             DLS[43] = "Auto(LLVM)"; 
             DLS[44] = "Static Steal";
+            DLS[45] = "static_balanced_chunked";
+            DLS[46] = "kmp_sch_guided_simd";
 
             //--------------LB4OMP_extensions----------------
             DLS[48] = "FSC" ; 
@@ -2352,8 +2357,8 @@ if (goldenChunk) // if it is set
         if (AWFData.find(cLoopName) == AWFData.end()) //if no data about this loop
         {
 
-            std::vector<int> wS(nproc,0);
-            std::vector<int> sWS(nproc, 0);
+            std::vector<double> wS(nproc,0);
+            std::vector<double> sWS(nproc, 0);
             std::vector<double> eT(nproc,0.0);
             std::vector<double> sET(nproc, 0.0);
             std::vector<double> w;
@@ -2366,17 +2371,17 @@ if (goldenChunk) // if it is set
                w = defaultweights;
             }
 
-            //set a new loop record and set autoSearch to 1
+            //set a new loop record 
             AWFDataRecord data = 
             {
                 0, //timeStep
                wS, //workPerStep
               sWS, //sumWorkPerStep
-               eT, //excutionTimes
+               eT, //executionTimes
               sET, //sumExecutionTimes
                 w //weights   
-            }; 
-
+            };
+            //printf("tid: %d created record for loop %s \n", tid, cLoopName);
             //create a new record
             AWFData.insert(std::pair<std::string,AWFDataRecord>(cLoopName, data));
          }
@@ -4672,6 +4677,10 @@ if((int)tid == 0){
 
      // record chunk for this thread
     AWFData.at(cLoopName).workPerStep[tid] += *p_ub - *p_lb + 1;
+    //if((*p_ub - *p_lb + 1) < 0)
+    //{
+    //  printf("thread %d is assignd a negative value \n", tid);
+    //}
     //{if (tid == 0)printf("chunksize: %d \n", *p_ub - *p_lb +1);}
  
       if (pr->flags.ordered) {
@@ -4684,7 +4693,8 @@ if((int)tid == 0){
        // record thread finishing time
        double temp = __kmp_get_ticks2();
        AWFData.at(cLoopName).executionTimes[tid]  = temp - AWFData.at(cLoopName).executionTimes[tid];
-
+       //if ( AWFData.at(cLoopName).executionTimes[tid]  < 0) 
+       // printf("thread %d exe time is negative !! \n", tid);
 
 
        //add weighted work done per thread
@@ -4728,10 +4738,10 @@ if((int)tid == 0){
           for(T i=0; i< nproc; i++)
           {
             AWFData.at(cLoopName).weights[i] = awap / AWFData.at(cLoopName).sumExecutionTimes[i] * AWFData.at(cLoopName).sumWorkPerStep[i] * nproc/trw ;
-          //  printf("%d, %lf \n", i, AWFData.at(cLoopName).weights[i]);
+            //printf("%d, %lf \n", i, AWFData.at(cLoopName).weights[i]);
           }
              
-         // printf("[AWF] status == 0, step %d,  thread %d, weight %lf, time %lf\n", AWFData.at(cLoopName).timeStep,tid, AWFData.at(cLoopName).weights[tid],  AWFData.at(cLoopName).executionTimes[tid]);
+          //printf("[AWF] status == 0, step %d,  thread %d, weight %lf, time %lf\n", AWFData.at(cLoopName).timeStep,tid, AWFData.at(cLoopName).weights[tid],  AWFData.at(cLoopName).executionTimes[tid]);
        }
       *p_lb = 0;
       *p_ub = 0;
