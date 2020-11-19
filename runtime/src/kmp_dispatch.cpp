@@ -1195,8 +1195,29 @@ LOOP_TIME_MEASURE_START
     pr->u.p.dbl_parm2 = dbl_parm2;
   } // case
   break;
+case kmp_sch_fiss:{
+	/* fixed increase size chunk*/
+ 	KD_TRACE(100, ("__kmp_dispatch_init_algorithm: T#%d kmp_sch_fiss case\n", gtid));
+	int fiss_stages=nproc-1;
+      if(getenv("KMP_FISS_STAGES") !=NULL)
+                fiss_stages= atoi(getenv("KMP_FISS_STAGES"));
+	double X = 2.0+fiss_stages;
+        double fiss_chunk = floor(tc/(X*nproc));
+	double temp1= 2* tc * (1 - (fiss_stages/X));
+    	double temp2 = (nproc * fiss_stages * (fiss_stages-1));
+    	double fiss_delta= floor(temp1/temp2);
+    	if(fiss_delta<0)
+        	fiss_delta=0;
+	if (fiss_chunk <chunk)
+	{
+		fiss_chunk=chunk;
+	}
+        pr->u.p.parm1 = fiss_delta;
+	pr->u.p.parm2 = fiss_chunk;
+}
+break;
 case kmp_sch_mfsc:{
-	/* modified */
+	/* modified fsc*/
         KD_TRACE(100, ("__kmp_dispatch_init_algorithm: T#%d kmp_sch_mfsc case\n", gtid));
 	int temp = (tc+nproc-1)/nproc;
     	int chunk_mfsc = (int) (0.55+temp*log(2.0)/log((1.0*temp)));
@@ -3509,6 +3530,48 @@ if((int)tid == 0){
     
   } // case
   break;
+case kmp_sch_fiss:{
+	KD_TRACE(100, ("__kmp_dispatch_next_algorithm: T#%d kmp_sch_fiss case\n",gtid));
+	ST fiss_delta=pr->u.p.parm1;
+	ST fiss_chunk=pr->u.p.parm2;
+	ST total_iterations = (ST) pr->u.p.tc;
+	ST total_threads= (ST)nproc;
+	ST counter = (ST) test_then_inc<ST>((volatile ST *)&sh->u.s.counter);
+        counter = (int)counter /(int)total_threads;
+	ST calculated_chunk = fiss_chunk + (counter*fiss_delta);
+	ST start_index =test_then_add<ST>(RCAST(volatile ST *, &sh->u.s.iteration), (ST)calculated_chunk);
+        ST end_index = calculated_chunk+start_index-1;
+        if(end_index > total_iterations-1)
+                end_index=total_iterations-1;
+        if(start_index <= end_index)
+        {
+                status=1;
+                init=start_index;
+                limit=end_index;
+                start = pr->u.p.lb;
+                incr = pr->u.p.st;
+                if (p_st != nullptr)
+                        *p_st = incr;
+                *p_lb = start_index;
+                *p_ub = end_index;
+                //printf("start %d end %d\n", *p_lb, *p_ub);
+                if (pr->flags.ordered) {
+                        pr->u.p.ordered_lower = init;
+                        pr->u.p.ordered_upper = limit;
+                }
+        }
+        else
+        {
+                status=0;
+                //printf("end***********\n");
+                *p_lb = 0;
+                *p_ub = 0;
+                if (p_st != nullptr)
+                        *p_st = 0;
+        }
+
+}
+break;
 case kmp_sch_mfsc:{
 	KD_TRACE(100, ("__kmp_dispatch_next_algorithm: T#%d kmp_sch_mfsc case\n",gtid));
 	ST calculated_chunk = (ST) pr->u.p.parm1;
