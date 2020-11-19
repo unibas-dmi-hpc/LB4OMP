@@ -25,13 +25,13 @@ LB4OMP
 | ``Factoring (FAC)``  
 | ``Improved implementation of Factoring (mFAC)``  
 | ``Practical variant of factoring (FAC2)`` 
-|``Practical variant of weighted factoring (WF2)``
+| ``Practical variant of weighted factoring (WF2)``
 | ``Tapering (TAP)``
 | ``Modified Fixed size chunk (FSC)`` 
 | ``Trapezoid factoring self scheduling  (TFSS)``
 | ``Fixed increase self scheduling (FISS)``
 | ``Variable increase self scheduling (FISS)``
-| ``Random (RND)``
+``Random (RND)``
 
 
 
