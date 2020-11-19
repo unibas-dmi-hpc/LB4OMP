@@ -250,6 +250,7 @@ enum sched_type __kmp_sch_map[kmp_sched_upper - kmp_sched_lower_ext +
     kmp_sch_fiss, // ==> kmp_sch_fiss   = 122
     kmp_sch_viss, // ==> kmp_sch_viss   = 123
     kmp_sch_rnd, // ==> kmp_sch_rnd   = 124
+    kmp_sch_fac2b, // ==> kmp_sch_fac2b   = 124
     //--------------LB4OMP_extensions----------------
     // will likely not be used, introduced here just to debug the code
     // of public intel extension schedules
