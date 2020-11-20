@@ -3345,7 +3345,7 @@ if((int)tid == 0){
 
     // atomically increase factoring counter
     counter = test_then_inc<ST>((volatile ST *)&sh->u.s.counter);
-    printf("min chunk %d\n", min_chunk);
+    //printf("min chunk %d\n", min_chunk);
     // calculate current batch index
     batch = counter / nproc;
 
