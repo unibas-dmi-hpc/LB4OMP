@@ -3584,8 +3584,8 @@ case kmp_sch_fac2b:{
                 incr = pr->u.p.st;
                 if (p_st != nullptr)
                         *p_st = incr;
-                *p_lb = start_index;
-                *p_ub = end_index;
+		*p_lb = start + init * incr;
+      		*p_ub = start + limit * incr; 
                 //printf("start %d end %d\n", *p_lb, *p_ub);
                 if (pr->flags.ordered) {
                         pr->u.p.ordered_lower = init;
@@ -3623,8 +3623,8 @@ case kmp_sch_rnd:{
                 incr = pr->u.p.st;
                 if (p_st != nullptr)
                         *p_st = incr;
-                *p_lb = start_index;
-                *p_ub = end_index;
+                *p_lb = start + init * incr;
+                *p_ub = start + limit * incr; 
                 //printf("start %d end %d\n", *p_lb, *p_ub);
                 if (pr->flags.ordered) {
                         pr->u.p.ordered_lower = init;
@@ -3674,9 +3674,9 @@ case kmp_sch_viss:{
                 incr = pr->u.p.st;
                 if (p_st != nullptr)
                         *p_st = incr;
-                *p_lb = start_index;
-                *p_ub = end_index;
-                //printf("start %d end %d\n", *p_lb, *p_ub);
+                *p_lb = start + init * incr;
+                *p_ub = start + limit * incr;                 
+		//printf("start %d end %d\n", *p_lb, *p_ub);
                 if (pr->flags.ordered) {
                         pr->u.p.ordered_lower = init;
                         pr->u.p.ordered_upper = limit;
@@ -3716,9 +3716,9 @@ case kmp_sch_fiss:{
                 incr = pr->u.p.st;
                 if (p_st != nullptr)
                         *p_st = incr;
-                *p_lb = start_index;
-                *p_ub = end_index;
-                //printf("start %d end %d\n", *p_lb, *p_ub);
+                *p_lb = start + init * incr;
+                *p_ub = start + limit * incr; 
+		//printf("start %d end %d\n", *p_lb, *p_ub);
                 if (pr->flags.ordered) {
                         pr->u.p.ordered_lower = init;
                         pr->u.p.ordered_upper = limit;
@@ -3820,9 +3820,9 @@ case kmp_sch_tfss:{
                 incr = pr->u.p.st;
                 if (p_st != nullptr)
                         *p_st = incr;
-                *p_lb = start_index;
-                *p_ub = end_index;
-                //printf("start %d end %d\n", *p_lb, *p_ub);
+                *p_lb = start + init * incr;
+                *p_ub = start + limit * incr;                 
+		//printf("start %d end %d\n", *p_lb, *p_ub);
                 if (pr->flags.ordered) {
                         pr->u.p.ordered_lower = init;
                         pr->u.p.ordered_upper = limit;
@@ -3877,8 +3877,8 @@ break;
       		incr = pr->u.p.st;
       		if (p_st != nullptr)
         		*p_st = incr;
-      		*p_lb = start_index; 
-      		*p_ub = end_index;
+                *p_lb = start + init * incr;
+                *p_ub = start + limit * incr; 		
 		//printf("start %d end %d\n", *p_lb, *p_ub);
       		if (pr->flags.ordered) {
         		pr->u.p.ordered_lower = init;
