@@ -1540,7 +1540,7 @@ void __kmp_dispatch_init_algorithm(ident_t *loc, int gtid,
       schedule = team->t.t_sched.r_sched_type;
       // Detail the schedule if needed (global controls are differentiated
       // appropriately)
-      if (schedule == kmp_sch_static || schedule == kmp_sch_auto ||
+      if (schedule == kmp_sch_static  ||
           schedule == __kmp_static) {
         schedule = kmp_sch_static_balanced_chunked;
       } else {
