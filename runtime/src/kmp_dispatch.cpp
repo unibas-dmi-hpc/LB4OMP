@@ -1156,7 +1156,10 @@ void auto_DLS_Search(int N, int P, int option)
         //turn off our custom auto
         AUTO_FLAG = 0;
         // set the schedule to the original LLVM auto 
-        autoLoopData.at(autoLoopName).cDLS = GSS_LLVM; 
+        autoLoopData.at(autoLoopName).cDLS = GSS_LLVM;
+        #if OMP_45_ENABLED
+        autoLoopData.at(autoLoopName).cDLS = kmp_sch_static_balanced_chunked; 
+        #endif
         //reset search trial counter
         autoLoopData.at(autoLoopName).searchTrials = 0;
         // set auto search of this loop to one to always turn off AUTO_FLAG
@@ -1540,7 +1543,7 @@ void __kmp_dispatch_init_algorithm(ident_t *loc, int gtid,
       schedule = team->t.t_sched.r_sched_type;
       // Detail the schedule if needed (global controls are differentiated
       // appropriately)
-      if (schedule == kmp_sch_static  ||
+      if (schedule == kmp_sch_static  || schedule == kmp_sch_auto ||
           schedule == __kmp_static) {
         schedule = kmp_sch_static_balanced_chunked;
       } else {
