@@ -3488,7 +3488,7 @@ if((int)tid == 0){
     KD_TRACE(100, ("__kmp_dispatch_next_algorithm: T#%d kmp_sch_wf case\n",
                    gtid));
     trip = pr->u.p.tc;
-    printf("min chunk %d\n", min_chunk);
+    //printf("min chunk %d\n", min_chunk);
     // atomically increase factoring counter
     counter = test_then_inc<ST>((volatile ST *)&sh->u.s.counter);
 
