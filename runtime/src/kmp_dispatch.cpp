@@ -306,12 +306,14 @@ void init_loop_timer(const char* loopLine, long ub){
 //  University of Basel, Switzerland
 //  -------------------------------------------------------------------------------------------------------//
 
-int goldenChunkSize(int N, int P)
+int goldenChunkSize(int N, int P, int AUTO_FLAG)
 {
 
   int golden = 0;
   int chunkSize = 0;
 
+  // default for auto to use goldenChunk unless user do not want to by explicitly export KMP_Golden_Chunksize
+  golden = AUTO_FLAG;
   if (std::getenv("KMP_Golden_Chunksize") != NULL)
   {
       golden = atoi(std::getenv("KMP_Golden_Chunksize"));
@@ -418,7 +420,7 @@ void autoBinarySearch(int N, int P)
 
    int step; // how much we move right or left
 
-   step = DLSProtfolioSize/(1<<autoLoopData.at(autoLoopName).searchTrials);
+   step = 2* DLSProtfolioSize/(1<<autoLoopData.at(autoLoopName).searchTrials); // first full jump to far right ...then far jump to far left 
 
     #if KMP_DEBUG
          printf("current LB: %lf , previous LB: %lf, step: %d\n", autoLoopData.at(autoLoopName).cLB, autoLoopData.at(autoLoopName).bestLB, step);
@@ -869,8 +871,8 @@ void autoFuzzySearch(int N, int P)
 // Therefore we need four membership functions, for 
 // 1. Tpar   ... Short | Medium | Long
 // 2. LB     ... Low | Moderate | High
-// 3. ΔTpar  ... MuchImproved | Improved | NoChange | Degraded | MuchDegraded
-// 4. ΔLB    ... MuchImproved | Improved | NoChange | Degraded | MuchDegraded
+// 3. ΔTpar  ... Improved | NoChange | Degraded
+// 4. ΔLB    ... Improved | NoChange | Degraded 
 
 
 //Output
@@ -919,9 +921,10 @@ if((autoLoopData.at(autoLoopName).bestLB == -1 ) && (autoLoopData.at(autoLoopNam
     // If LBISLow then use simple DLS
     DLSISSimple = MAX(TparISShort(Tpar), LBISLow(LB));
 
-    // If LBISModerate then use moderate DLS
-    // If TparISShort or TparISMedium and LBISHigh then use moderate DLS and chunksize
-    DLSISModerate = MAX(LBISModerate(LB),MIN(MAX(TparISShort(Tpar), TparISMedium(Tpar)),LBISHigh(LB)));
+    // If TparISMedium and LBISHigh or LBISModerate then use moderate DLS
+    // If TparISLong and LBISModerate then use moderate DLS
+    DLSISModerate = MAX(MIN(TparISMedium(Tpar),LBISHigh(LB)),MIN(TparISMedium(Tpar),LBISModerate(LB)));
+    DLSISModerate = MAX(DLSISModerate, MIN(TparISLong(Tpar),LBISModerate(LB)));
 
     
     // If TparISLong  and LBISHigh then use aggressive DLS
@@ -1674,7 +1677,7 @@ void __kmp_dispatch_init_algorithm(ident_t *loc, int gtid,
 
 //check autogoldenchunk
 
-int goldenChunk = goldenChunkSize(tc,nproc);
+int goldenChunk = goldenChunkSize(tc,nproc, AUTO_FLAG);
 
 
 if (goldenChunk) // if it is set
