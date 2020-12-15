@@ -878,7 +878,7 @@ void autoFuzzySearch(int N, int P)
 //Output
 // 1. DLS   ... which DLS to select
 // 2. ΔDLS  ... how far we should change the current one
-// 3. use chunksize ...currently on/off
+
 
 
 
@@ -908,7 +908,7 @@ double DLSISMoreAggressive = 0;
 double DLSISLessAggressive = 0;
 double DLSISSame = 0;
 int selectedDLS;
-//double UseChunk = 0;
+
 
 
 
@@ -932,15 +932,12 @@ if((autoLoopData.at(autoLoopName).bestLB == -1 ) && (autoLoopData.at(autoLoopNam
 }
 else // ..........rules how to change current DLS smartly ...based on ΔDLS and ΔLB
 { 
-// If DTparISImproved  then use chunksize
-// If DTparISDegraded and DlbISImproved then use chunksize
+
 // If LBISLow then DLSISSame
 // If DTparISImproved Then DLSISSame
 // If DTparISNoChange and DlbISNoChange then DLSISSame
 //
-      //MAX(DTparISImproved(DTpar), MIN(DTparISDegraded(DTpar), DlbISImproved(Dlb))) >= 0.5 ? UseChunk = 1 : UseChunk = 0;
-      //UseChunk = MAX(DTparISImproved(DTpar), MIN(DTparISDegraded(DTpar), DlbISImproved(Dlb)));
-     
+   
       DLSISSame = MIN(DTparISNoChange(DTpar),DlbISNoChange(Dlb));
       DLSISSame = MAX(DLSISSame, LBISLow(LB));
       DLSISSame = MAX(DLSISSame, DTparISImproved(DTpar));
@@ -953,7 +950,7 @@ else // ..........rules how to change current DLS smartly ...based on ΔDLS and 
       DLSISMoreAggressive = MAX(DLSISMoreAggressive, MIN(DTparISNoChange(DTpar),DlbISDegraded(Dlb)));
      
 
-// If DTparISDegraded and DlbISImproved then use less aggressive DLS and chunksize
+// If DTparISDegraded and DlbISImproved then use less aggressive DLS
 // If DTparISDegraded and DlbISNoChange then use less aggressive DLS
 // If DTparISNoChange and DlbISImproved then use less aggressive DLS
 //
@@ -966,11 +963,9 @@ else // ..........rules how to change current DLS smartly ...based on ΔDLS and 
       DLSISLessAggressive = MAX(DLSISLessAggressive, TparISShort(Tpar));
       DLSISLessAggressive = MAX(DLSISLessAggressive, MIN(DTparISDegraded(DTpar), LBISLow(LB)));
       //printf("Tpar: %lf, is short: %lf \n", Tpar, TparISShort(Tpar));
-      //if(MIN(DTparISMuchDegraded(DTpar), DlbISImproved(Dlb)) >= 0.5)  {UseChunk = 1;}
-      //UseChunk = MAX(UseChunk, MIN(DTparISDegraded(DTpar), DlbISImproved(Dlb)));
       
       #if KMP_DEBUG
-      printf("[ATUO] DLSISSAME: %lf, DLSISMoreAggressive: %lf, DLSISLessAggressive: %lf, UseChunk: %lf \n", DLSISSame, DLSISMoreAggressive, DLSISLessAggressive, UseChunk);
+      printf("[ATUO] DLSISSAME: %lf, DLSISMoreAggressive: %lf, DLSISLessAggressive: %lf \n", DLSISSame, DLSISMoreAggressive, DLSISLessAggressive);
       #endif
 }
 
@@ -982,9 +977,9 @@ else // ..........rules how to change current DLS smartly ...based on ΔDLS and 
 if((autoLoopData.at(autoLoopName).bestLB == -1 ) && (autoLoopData.at(autoLoopName).bestTime == -1) )
 {
 
-    /* STATIC, TSS, GSS_LLVM, GSS, mFAC2, FAC2, static_steal, AWFB, AWFC, AWFD, AWFE, mAF, AF, SS */
-    /*     0     1       2      3      4     5       6         7   8   9    10     11   12  13  14 */
-    /* |            Simple      |               Moderate  .    |   |   Aggressive                   | */
+    /* STATIC, SS, TSS, GSS_LLVM, GSS, mFAC2, FAC2, static_steal, AWFB, AWFC, AWFD, AWFE, mAF, AF */
+    /*     0     1       2      3      4     5       6         7   8   9   10     11   12  13  14 */
+    /* |            Simple      |               Moderate  .    |   |   Aggressive               | */
 
     // DLS
     //    
@@ -1079,24 +1074,7 @@ autoLoopData.at(autoLoopName).bestTime    = autoLoopData.at(autoLoopName).cTime;
 
 
 //set new DLS
-autoLoopData.at(autoLoopName).cDLS = selectedDLS;
-
-//UseChunk --All DLS will use the goldenChunksize Env. Variable
-
-// Golden ratio = 0.618 - choose a chunk size in the "middle" between 1 and N/2P
-//
-
-// the higher the value , the lower the chunk size, therefore reverse the UseChunk value
-//UseChunk = 1 - UseChunk;
-//map the calculated value of chunk (UseChunk) between 0.3 and .7
-//UseChunk = 0.3 + UseChunk*0.4;
-
-//int mul = log2(N/P)*0.618; // UseChunk instead of the golden ratio
-//autoLoopData.at(autoLoopName).cChunk = (N)/((2<<mul)*P);
-//#if KMP_DEBUG
- //printf("[AUTO] UseChunk is %lf ... chunksize: %d \n",  UseChunk, autoLoopData.at(autoLoopName).cChunk);
-//#endif
-      
+autoLoopData.at(autoLoopName).cDLS = selectedDLS;     
 
 }
 
@@ -1104,19 +1082,23 @@ autoLoopData.at(autoLoopName).cDLS = selectedDLS;
 
 /*---------------------------------------------- auto_DLS_Search ------------------------------------------*/
 // Search for the best DLS technique within portfolio for a specific loop
-// Sets the best identified DLS technique in autoLoopData[loopName][4]
+// Sets the best identified DLS technique in autoLoopData[loopName].cDLS
 // Identifies the best DLS technique based on loop execution time
-// Considers loop execution time and load imbalance measure by mean/max ...and cov, ... etc (extension)
+// Considers loop execution time and load imbalance measure by percent imbalance
 // Supports different search/optimization methods
 // 1. Exhaustive search 
 // 2. Binary search
 // 3. Random
-// 4. Fuzzy logic
-// ...Search/optimization method can be changed using environment variable: KMP_AUTO_Search_Method (to be extended)
+// 4. Expert (fuzzy logic)
+//
+// ...Search/optimization method is changed using chunk parameter with auto, i.e., auto,1 is exhaustive search and auto,4 is expert.
+// Original LLVM auto can be used by using auto,5
+//
+//
 // Input 
 // N: number of loop iterations
 // P: number of threads
-// option: passed as a chunk size with auto ... option can select the auto search method or set minimum chunk sizes for selected DLS techniques
+// option: passed as a chunk size with auto ... option can select the auto search method
 void auto_DLS_Search(int N, int P, int option) 
 {
    int currentPortfolioIndex =  autoLoopData.at(autoLoopName).cDLS;
