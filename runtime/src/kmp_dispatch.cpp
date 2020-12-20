@@ -1142,9 +1142,6 @@ void auto_DLS_Search(int N, int P, int option)
         AUTO_FLAG = 0;
         // set the schedule to the original LLVM auto 
         autoLoopData.at(autoLoopName).cDLS = GSS_LLVM;
-        #if OMP_45_ENABLED
-        autoLoopData.at(autoLoopName).cDLS = kmp_sch_static_balanced_chunked; 
-        #endif
         //reset search trial counter
         autoLoopData.at(autoLoopName).searchTrials = 0;
         // set auto search of this loop to one to always turn off AUTO_FLAG
