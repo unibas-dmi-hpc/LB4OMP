@@ -1136,7 +1136,7 @@ void auto_DLS_Search(int N, int P, int option)
         // set chunk size
         autoSetChunkSize(N, P);
     }
-    else //normal LLVM auto
+   /* else //normal LLVM auto - it will not reach to this part if chunk is higher than 4 
     {
         //turn off our custom auto
         AUTO_FLAG = 0;
@@ -1146,7 +1146,9 @@ void auto_DLS_Search(int N, int P, int option)
         autoLoopData.at(autoLoopName).searchTrials = 0;
         // set auto search of this loop to one to always turn off AUTO_FLAG
         autoLoopData.at(autoLoopName).autoSearch = 1;
+        
      }
+    */
 
     currentPortfolioIndex = autoLoopData.at(autoLoopName).cDLS;
 
@@ -1494,8 +1496,15 @@ void __kmp_dispatch_init_algorithm(ident_t *loc, int gtid,
 
     if (schedule == kmp_sch_auto) {
        
-       AUTO_FLAG = 1; //AUTO by Ali
-       
+       if (chunk <= 4) //AUTO by Ali
+       {
+          AUTO_FLAG = 1; //Set auto flag
+       }
+       else
+       {
+            chunk = KMP_DEFAULT_CHUNK; // use default chunk size with LLVM auto
+       }
+         
       // mapping and differentiation: in the __kmp_do_serial_initialize()
       schedule = __kmp_auto;
       //std::cout << "KMP_HAVE___RDTSC: " << KMP_HAVE___RDTSC << std::endl; // by Ali
@@ -1590,7 +1599,7 @@ void __kmp_dispatch_init_algorithm(ident_t *loc, int gtid,
   }
 
 
-
+int goldenChunk=0;
 // AUTO by Ali
     if(AUTO_FLAG)
     {
@@ -1627,6 +1636,8 @@ void __kmp_dispatch_init_algorithm(ident_t *loc, int gtid,
           { 
              //printf("chunk size %d \n", chunk);
              auto_DLS_Search(tc, nproc, chunk);
+             //check autogoldenchunk
+             goldenChunk = goldenChunkSize(tc,nproc, AUTO_FLAG);
           }
 
           //printf("tc: %d, tid: %d, nproc: %d \n", tc, tid, nproc);
@@ -1653,10 +1664,6 @@ void __kmp_dispatch_init_algorithm(ident_t *loc, int gtid,
 
     } //end auto flag
 
-
-//check autogoldenchunk
-
-int goldenChunk = goldenChunkSize(tc,nproc, AUTO_FLAG);
 
 
 if (goldenChunk) // if it is set
