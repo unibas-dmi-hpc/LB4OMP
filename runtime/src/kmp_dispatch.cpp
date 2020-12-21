@@ -1496,7 +1496,7 @@ void __kmp_dispatch_init_algorithm(ident_t *loc, int gtid,
 
     if (schedule == kmp_sch_auto) {
        
-       if (chunk <= 4) //AUTO by Ali
+       if ((chunk >= 1) && (chunk <= 4)) //AUTO by Ali
        {
           AUTO_FLAG = 1; //Set auto flag
        }
@@ -1599,7 +1599,6 @@ void __kmp_dispatch_init_algorithm(ident_t *loc, int gtid,
   }
 
 
-int goldenChunk=0;
 // AUTO by Ali
     if(AUTO_FLAG)
     {
@@ -1636,8 +1635,6 @@ int goldenChunk=0;
           { 
              //printf("chunk size %d \n", chunk);
              auto_DLS_Search(tc, nproc, chunk);
-             //check autogoldenchunk
-             goldenChunk = goldenChunkSize(tc,nproc, AUTO_FLAG);
           }
 
           //printf("tc: %d, tid: %d, nproc: %d \n", tc, tid, nproc);
@@ -1665,6 +1662,8 @@ int goldenChunk=0;
     } //end auto flag
 
 
+//check autogoldenchunk
+int  goldenChunk = goldenChunkSize(tc,nproc, AUTO_FLAG);
 
 if (goldenChunk) // if it is set
 {
