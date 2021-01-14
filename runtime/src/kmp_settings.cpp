@@ -3733,6 +3733,20 @@ static const char *__kmp_parse_single_omp_schedule(const char *name,
     sched = kmp_sch_profiling;
   else if (!__kmp_strcasecmp_with_sentinel("awf", ptr, *delim)) /* AWF */
     sched = kmp_sch_awf;
+  else if(!__kmp_strcasecmp_with_sentinel("pls", ptr, *delim)) /*PLS*/
+    sched = kmp_sch_pls;
+  else if(!__kmp_strcasecmp_with_sentinel("tfss", ptr, *delim)) /*TFSS*/
+    sched = kmp_sch_tfss;
+  else if(!__kmp_strcasecmp_with_sentinel("mfsc", ptr, *delim)) /*MFSC*/
+    sched = kmp_sch_mfsc;
+ else if(!__kmp_strcasecmp_with_sentinel("fiss", ptr, *delim)) /*FISS*/
+    sched = kmp_sch_fiss;
+ else if(!__kmp_strcasecmp_with_sentinel("viss", ptr, *delim)) /*VISS*/
+    sched = kmp_sch_viss;
+ else if(!__kmp_strcasecmp_with_sentinel("rnd", ptr, *delim)) /*RND*/
+    sched = kmp_sch_rnd;
+ else if(!__kmp_strcasecmp_with_sentinel("fac2b", ptr, *delim)) /*RND*/
+    sched = kmp_sch_fac2b;
     //--------------------LB4OMP_extensions--------------------------
 #if KMP_STATIC_STEAL_ENABLED
   else if (!__kmp_strcasecmp_with_sentinel("static_steal", ptr, *delim))
@@ -3887,6 +3901,27 @@ static void __kmp_stg_print_omp_schedule(kmp_str_buf_t *buffer,
     case kmp_sch_awf:
       __kmp_str_buf_print(buffer, "%s,%d'\n", "awf", __kmp_chunk);
       break;
+    case kmp_sch_pls:
+      __kmp_str_buf_print(buffer, "%s,%d'\n", "pls", __kmp_chunk);		
+      break;
+    case kmp_sch_tfss:
+       __kmp_str_buf_print(buffer, "%s,%d'\n", "tfss", __kmp_chunk);
+      break;
+    case kmp_sch_mfsc:
+       __kmp_str_buf_print(buffer, "%s,%d'\n", "mfsc", __kmp_chunk);
+      break;
+    case kmp_sch_fiss:
+       __kmp_str_buf_print(buffer, "%s,%d'\n", "fiss", __kmp_chunk);
+      break;
+    case kmp_sch_viss:
+       __kmp_str_buf_print(buffer, "%s,%d'\n", "viss", __kmp_chunk);
+      break;
+    case kmp_sch_rnd:
+       __kmp_str_buf_print(buffer, "%s,%d'\n", "rnd", __kmp_chunk);
+      break;
+    case kmp_sch_fac2b:
+       __kmp_str_buf_print(buffer, "%s,%d'\n", "fac2b", __kmp_chunk);
+      break;	
       //---------------LB4OMP_extensions----------------------
     case kmp_sch_static:
     case kmp_sch_static_chunked:
