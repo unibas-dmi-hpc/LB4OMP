@@ -122,16 +122,16 @@ std::vector<sched_type> autoDLSPortfolio{
   //kmp_sch_fac,  // requires profiling
   //kmp_sch_faca, // requires profiling
   kmp_sch_fac2a,                      //  ... 5
- // kmp_sch_fac2,                       //  ... 6
-  kmp_sch_static_steal,             // ... 7 static_steal
+ // kmp_sch_fac2,                      // fac2a is more optimized implementation 
+  kmp_sch_static_steal,             // ... 6 static_steal
   //kmp_sch_wf,                         //  not needed on homogeneous cores 
   //kmp_sch_bold,  // requires profiling
-  kmp_sch_awf_b,                      //  ... 8
-  kmp_sch_awf_c,                     //   ... 9
-  kmp_sch_awf_d,                    //   ... 10
-  kmp_sch_awf_e,                   //    ... 11
-  kmp_sch_af_a,                   //     ... 12
-  //kmp_sch_af,                    //      ... 13 
+  kmp_sch_awf_b,                      //  ... 7
+  kmp_sch_awf_c,                     //   ... 8
+  kmp_sch_awf_d,                    //   ... 9
+  kmp_sch_awf_e,                   //    ... 10
+  kmp_sch_af_a,                   //     ... 11
+  //kmp_sch_af,                    //      af_a is more optimized implementation 
   }; 
 
 enum DLSPortfolio {STATIC, SS, TSS, GSS_LLVM, GSS, mFAC2, static_steal, AWFB, AWFC, AWFD, AWFE, mAF};
@@ -184,37 +184,7 @@ double t1;
 double t2;
 double t3;
 
-int countLoops = 0;
 
-std::unordered_map<std::string, std::atomic<int> > currentLoopMap;
-
-// void init_chunk_sizes(int iterations)
-// {
-//    // printf("iterations is %d\n", iterations);
-//   int count = 0;
-//   int count2 = 0;
-//   count = std::atomic_fetch_add(&chunkUpdates, 1);
-//   if (count == 0){
-//     // chunkStart = 0;
-//     chunkSizeInfo = (int *) malloc( sizeof(int) * (int)iterations * 5);
-//     std::atomic_fetch_add(&currentChunkIndex, 1);
-//     //currentChunkIndex++;
-
-//    // count2 = std::atomic_fetch_add(&chunkStart, 1);
-//   }
-//   else{
-//     //while(count2 == 0){
-//       // printf("tst: %d\n", chunkStart);
-//       //count2 = std::atomic_fetch_add(&chunkStart, 0);
-//     //}
-//     while(currentChunkIndex==-1)
-//     {
-      
-//     }
-//   }
-//    // printf("Count %d, %d\n", count, currentChunkIndex);
-  
-// }
 
 void init_chunk_sizes(int iterations)
 {
@@ -290,30 +260,13 @@ void init_loop_timer(const char* loopLine, long ub){
     // printf("Count init timer: %d\n", count);
 		if (count == 0)
   		{
-			char* fileData = std::getenv("KMP_TIME_LOOPS");
-	    	if(fileData==NULL || strcmp(fileData,"")==0)
-	    	{
-	    		std::cout << "Please export KMP_TIME_LOOPS in your environment with the path for the storing the loop times\n";
-	    		exit(-1);
-	    	}
-	    	// std::fstream ofs;
-	    	// ofs.open(fileData, std::ofstream::out | std::ofstream::app);
-	 		  // ofs << "Location: "<< loopLine << " #iterations "<< (ub+1) <<" ";
-	 		  globalLoopline = loopLine;
-        globalNIterations = ub+1;
-	  		// ofs.close();
-	  		mytime = std::chrono::high_resolution_clock::now();
-        timeInit = mytime;
-        // countLoops++;
-        // auto searchLoopLoc = currentLoopMap.find(loopLine);
-        if(currentLoopMap.find(loopLine) == currentLoopMap.end()){
-          currentLoopMap.insert( std::pair<std::string,int>(loopLine, 1));
-        }
-        else{
-          currentLoopMap.at(loopLine)++;
-          // searchLoopLoc->second
-          // searchLoopLoc->second = searchLoopLoc->second+1;
-        }
+		
+	 	   globalLoopline = loopLine;
+                   globalNIterations = ub+1;
+	  		
+	           mytime = std::chrono::high_resolution_clock::now();
+                   timeInit = mytime;
+ 
 	  	}
 }
 
@@ -427,7 +380,7 @@ void autoExhaustiveSearch(int N, int P)
  *
  GOAL: achive the best possible LB with minimum overhead  
  * DLS techniques order
- * STATIC, TSS, GSS_LLVM, GSS, static_steal, mFAC2, FAC2, WF, AWFB, AWFC, AWFD, AWFE, mAF, AF, SS */
+ * STATIC, SS, TSS, GSS_LLVM, GSS, static_steal, mFAC2, AWFB, AWFC, AWFD, AWFE, mAF*/
 
 void autoBinarySearch(int N, int P)
 {
@@ -840,9 +793,9 @@ double LBISLow(double LB)
 
 }
 
-/* STATIC, TSS, GSS_LLVM, GSS, static_steal, mFAC2, FAC2, AWFB, AWFC, AWFD, AWFE, mAF, AF, SS */
-/*     0     1       2      3      4           5      6    7   8     9     10     11   12  13 */
-/* |            Simple      |               Moderate  .    |   |   Aggressive               | */
+/* STATIC, SS, TSS, GSS_LLVM, GSS, static_steal, mFAC2, AWFB, AWFC, AWFD, AWFE, mAF */
+/*     0   1    2      3      4           5      6       7     8     9     10   11  */
+/* | Simple|               Moderate                  |   |   Aggressive           | */
 
 // DLS
 //    
@@ -995,9 +948,9 @@ else // ..........rules how to change current DLS smartly ...based on ΔDLS and 
 if((autoLoopData.at(autoLoopName).bestLB == -1 ) && (autoLoopData.at(autoLoopName).bestTime == -1) )
 {
 
-    /* STATIC, SS, TSS, GSS_LLVM, GSS, mFAC2, FAC2, static_steal, AWFB, AWFC, AWFD, AWFE, mAF, AF */
-    /*     0     1       2      3      4     5       6         7   8   9   10     11   12  13  14 */
-    /* |            Simple      |               Moderate  .    |   |   Aggressive               | */
+    /* STATIC, SS, TSS, GSS_LLVM, GSS, mFAC2, static_steal, AWFB, AWFC, AWFD, AWFE, mAF */
+    /*     0   1    2      3       4     5       6            7     8    9     10    11 */
+    /* | Simple  |               Moderate                |   |   Aggressive           | */
 
     // DLS
     //    
@@ -1125,48 +1078,42 @@ void auto_DLS_Search(int N, int P, int option)
    #endif
 
 
-    //Option 1: Exhaustive search  - try all DLS techniques and select the best one
-    if(option == 1)
-    {
-        // set DLS
-        autoExhaustiveSearch(N, P);
-        // set chunk size
-        autoSetChunkSize(N, P);
-    }
+    //Auto options 2 - 5 random, exhaustive, binary, expert, 1 is the default LLVM auto (GSS_LLVM)
     else if(option == 2)
-    {
-        // set DLS
-        autoBinarySearch(N, P);
-        // set chunk size
-        autoSetChunkSize(N, P);
-    }
-    else if(option == 3)
     {
         // set DLS
         autoRandomSearch(N, P);
         // set chunk size
         autoSetChunkSize(N, P);
     }
-    else if (option == 4)
+    if(option == 3)
+    {
+        // set DLS
+        autoExhaustiveSearch(N, P);
+        // set chunk size
+        autoSetChunkSize(N, P);
+    }
+    else if(option == 4)
+    {
+        // set DLS
+        autoBinarySearch(N, P);
+        // set chunk size
+        autoSetChunkSize(N, P);
+    }
+    else if (option == 5)
     {
         // set DLS
         autoFuzzySearch(N, P);
         // set chunk size
         autoSetChunkSize(N, P);
     }
-   /* else //normal LLVM auto - it will not reach to this part if chunk is higher than 4 
+    else //normal LLVM auto - it will not reach to this part if chunk is higher than 4 
     {
-        //turn off our custom auto
-        AUTO_FLAG = 0;
-        // set the schedule to the original LLVM auto 
-        autoLoopData.at(autoLoopName).cDLS = GSS_LLVM;
-        //reset search trial counter
-        autoLoopData.at(autoLoopName).searchTrials = 0;
-        // set auto search of this loop to one to always turn off AUTO_FLAG
-        autoLoopData.at(autoLoopName).autoSearch = 1;
+       //Error ...it should not reach that part of the code
+       std::cout << "[Auto] invalid option ... this part should not be reachable \n";
         
      }
-    */
+    
 
     currentPortfolioIndex = autoLoopData.at(autoLoopName).cDLS;
 
@@ -1323,39 +1270,34 @@ void print_loop_timer(enum sched_type schedule, int tid_for_timer) //modified to
         exit(-1);
       }
 
+      count = std::atomic_fetch_sub(&timeUpdates, 1);
+	
       std::fstream ofs;
       ofs.open(fileData, std::ofstream::out | std::ofstream::app);
-      ofs << "LoopOccurrence: " << currentLoopMap.at(globalLoopline) << " Location: " << globalLoopline << " #iterations " << globalNIterations << " threadID: " << tid_for_timer << " threadTime: " << time_span.count() << std::endl;
+      ofs << "LoopOccurrence: " << count << " Location: " << globalLoopline << " #iterations " << globalNIterations << " threadID: " << tid_for_timer << " threadTime: " << time_span.count() << std::endl;
     
-
-	    count = std::atomic_fetch_sub(&timeUpdates, 1);
-
 	    
-      if ( count == 1){
-		  //mytime = std::chrono::high_resolution_clock::now();
-  			timeEnd = mytime;
-  			std::chrono::duration<double> time_span = std::chrono::duration_cast<std::chrono::duration<double>>(timeEnd - timeInit);
-  			char* fileData = std::getenv("KMP_TIME_LOOPS");
+      if ( count == 1)
+      {
+	  //mytime = std::chrono::high_resolution_clock::now();
+  	  timeEnd = mytime;
+  	  std::chrono::duration<double> time_span = std::chrono::duration_cast<std::chrono::duration<double>>(timeEnd - timeInit);
+  	  
+  	  ofs << "Location: "<< globalLoopline << " #iterations "<< globalNIterations << " LoopTime: " << time_span.count() << " Schedule: " << DLS[schedule] << " Chunk: " << global_chunk << std::endl; //modified to print the current schedule and chunk size 
 
-          if(fileData==NULL || strcmp(fileData,"")==0){
-    	    		std::cout << "Please export KMP_TIME_LOOPS in your environment with the path for the storing the loop times\n";
-    	    		exit(-1);
-    	    }
+  	  if(currentChunkIndex != -1 && chunkSizeInfo != NULL)
+	  {
+  	        for(int i = 0 ; i < currentChunkIndex ; i += 4)
+		{
+                    ofs << "chunkLocation: " << globalLoopline << " lower " << chunkSizeInfo[i] << " upper " << chunkSizeInfo[i+1] <<  " chunksize " << chunkSizeInfo[i+2] << " tid " << chunkSizeInfo[i+3]<< std::endl;
+  	        }
 
-  	    	ofs.open(fileData, std::ofstream::out | std::ofstream::app);
-  	      ofs << "Location: "<< globalLoopline << " #iterations "<< globalNIterations << " LoopTime: " << time_span.count() << " Schedule: " << DLS[schedule] << " Chunk: " << global_chunk << std::endl; //modified to print the current schedule and chunk size 
-
-  	      if(currentChunkIndex != -1 && chunkSizeInfo != NULL){
-  				    for(int i = 0 ; i < currentChunkIndex ; i += 4){
-  					      ofs << "chunkLocation: " << globalLoopline << " lower " << chunkSizeInfo[i] << " upper " << chunkSizeInfo[i+1] <<  " chunksize " << chunkSizeInfo[i+2] << " tid " << chunkSizeInfo[i+3]<< std::endl;
-  				}
-
-        	currentChunkIndex = -1;
-          chunkUpdates = 0;
-          chunkStart = 0;
+                currentChunkIndex = -1;
+                chunkUpdates = 0;
+                chunkStart = 0;
         	free(chunkSizeInfo);
   	        	
-  	    	}
+  	   }
   	        	
       }     
   ofs.close();
@@ -1533,7 +1475,7 @@ void __kmp_dispatch_init_algorithm(ident_t *loc, int gtid,
 
     if (schedule == kmp_sch_auto) {
        
-       if ((chunk >= 1) && (chunk <= 4)) //AUTO by Ali
+       if ((chunk >= 2) && (chunk <= 5)) //AUTO by Ali
        {
           AUTO_FLAG = 1; //Set auto flag
        }
@@ -1712,13 +1654,13 @@ if (goldenChunk) // if it is set
 }
 
 
- // update global_chunk value for printing
- global_chunk = chunk;
+  // update global_chunk value for printing
+  global_chunk = chunk;
   
 
 
 
-    	INIT_CHUNK_RECORDING
+  INIT_CHUNK_RECORDING
     	
   	
     
