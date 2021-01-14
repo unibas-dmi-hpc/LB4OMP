@@ -1079,14 +1079,14 @@ void auto_DLS_Search(int N, int P, int option)
 
 
     //Auto options 2 - 5 random, exhaustive, binary, expert, 1 is the default LLVM auto (GSS_LLVM)
-    else if(option == 2)
+    if(option == 2)
     {
         // set DLS
         autoRandomSearch(N, P);
         // set chunk size
         autoSetChunkSize(N, P);
     }
-    if(option == 3)
+    else if(option == 3)
     {
         // set DLS
         autoExhaustiveSearch(N, P);
