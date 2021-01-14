@@ -57,7 +57,8 @@ public:
   tsc_tick_count()
       : my_count(static_cast<int64_t>(__builtin_readcyclecounter())) {}
 #elif KMP_HAVE___RDTSC
-  tsc_tick_count() : my_count(static_cast<int64_t>(__rdtsc())) {}
+  unsigned int dummy;
+  tsc_tick_count() : my_count(static_cast<int64_t>(__rdtscp(&dummy))) {}  //use rdtscp instead of rdtsc  AUTO by Ali
 #else
 #error Must have high resolution timer defined
 #endif
@@ -83,6 +84,66 @@ inline tsc_tick_count::tsc_interval_t operator-(const tsc_tick_count &t1,
                                                 const tsc_tick_count &t0) {
   return tsc_tick_count::tsc_interval_t(t1.my_count - t0.my_count);
 }
+
+// added here the tick time definition to enable using it without enabling LIBOMP_STATS by Ali
+#if KMP_HAVE_TICK_TIME
+#if KMP_MIC
+double tsc_tick_count::tick_time() {
+  // pretty bad assumption of 1GHz clock for MIC
+  return 1 / ((double)1000 * 1.e6);
+}
+#elif KMP_ARCH_X86 || KMP_ARCH_X86_64
+#include <string.h>
+// Extract the value from the CPUID information
+double tsc_tick_count::tick_time() {
+  static double result = 0.0;
+
+  if (result == 0.0) {
+    kmp_cpuid_t cpuinfo;
+    char brand[256];
+
+    __kmp_x86_cpuid(0x80000000, 0, &cpuinfo);
+    memset(brand, 0, sizeof(brand));
+    int ids = cpuinfo.eax;
+
+    for (unsigned int i = 2; i < (ids ^ 0x80000000) + 2; i++)
+      __kmp_x86_cpuid(i | 0x80000000, 0,
+                      (kmp_cpuid_t *)(brand + (i - 2) * sizeof(kmp_cpuid_t)));
+
+    char *start = &brand[0];
+    for (; *start == ' '; start++)
+      ;
+
+    char *end = brand + KMP_STRLEN(brand) - 3;
+    uint64_t multiplier;
+
+    if (*end == 'M')
+      multiplier = 1000LL * 1000LL;
+    else if (*end == 'G')
+      multiplier = 1000LL * 1000LL * 1000LL;
+    else if (*end == 'T')
+      multiplier = 1000LL * 1000LL * 1000LL * 1000LL;
+    else {
+      std::cout << "Error determining multiplier '" << *end << "'\n";
+      exit(-1);
+    }
+    *end = 0;
+    while (*end != ' ')
+      end--;
+    end++;
+
+    double freq = strtod(end, &start);
+    if (freq == 0.0) {
+      std::cout << "Error calculating frequency " << end << "\n";
+      exit(-1);
+    }
+
+    result = ((double)1.0) / (freq * multiplier);
+  }
+  return result;
+}
+#endif
+#endif
 
 inline tsc_tick_count::tsc_interval_t
 operator-(const tsc_tick_count::tsc_interval_t &i1,

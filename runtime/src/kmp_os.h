@@ -914,10 +914,10 @@ typedef void (*microtask_t)(int *gtid, int *npr, ...);
 #endif
 
 // Enable tick time conversion of ticks to seconds
-#if KMP_STATS_ENABLED
+//#if KMP_STATS_ENABLED // by Ali ...always make tick time available
 #define KMP_HAVE_TICK_TIME                                                     \
   (KMP_OS_LINUX && (KMP_MIC || KMP_ARCH_X86 || KMP_ARCH_X86_64))
-#endif
+//#endif //by Ali
 
 // Warning levels
 enum kmp_warnings_level {
