@@ -184,7 +184,7 @@ double t1;
 double t2;
 double t3;
 
-
+std::unordered_map<std::string, std::atomic<int> > currentLoopMap; // keep a record of the time-step/loop execution instance 
 
 void init_chunk_sizes(int iterations)
 {
@@ -266,6 +266,15 @@ void init_loop_timer(const char* loopLine, long ub){
 	  		
 	           mytime = std::chrono::high_resolution_clock::now();
                    timeInit = mytime;
+			
+		   if(currentLoopMap.find(loopLine) == currentLoopMap.end())
+		   {
+          		currentLoopMap.insert( std::pair<std::string,int>(loopLine, 1));
+		   }
+		   else
+		   {
+          		currentLoopMap.at(loopLine)++;
+		   }
  
 	  	}
 }
@@ -1274,7 +1283,7 @@ void print_loop_timer(enum sched_type schedule, int tid_for_timer) //modified to
 	
       std::fstream ofs;
       ofs.open(fileData, std::ofstream::out | std::ofstream::app);
-      ofs << "LoopOccurrence: " << count << " Location: " << globalLoopline << " #iterations " << globalNIterations << " threadID: " << tid_for_timer << " threadTime: " << time_span.count() << std::endl;
+      ofs << "LoopOccurrence: " << currentLoopMap.at(globalLoopline) << " Location: " << globalLoopline << " #iterations " << globalNIterations << " threadID: " << tid_for_timer << " threadTime: " << time_span.count() << std::endl;
     
 	    
       if ( count == 1)
