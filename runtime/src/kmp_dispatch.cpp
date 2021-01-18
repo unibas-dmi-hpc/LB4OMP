@@ -254,7 +254,6 @@ void read_profiling_data(std::string loopLocation){
 
 void init_loop_timer(const char* loopLine, long ub){
   // printf("init loop timer\n");
-		std::chrono::high_resolution_clock::time_point mytime;
 		int count = 0;
 		count = std::atomic_fetch_add(&timeUpdates, 1);
     // printf("Count init timer: %d\n", count);
@@ -264,8 +263,8 @@ void init_loop_timer(const char* loopLine, long ub){
 	 	   globalLoopline = loopLine;
                    globalNIterations = ub+1;
 	  		
-	           mytime = std::chrono::high_resolution_clock::now();
-                   timeInit = mytime;
+	           timeInit = std::chrono::high_resolution_clock::now();
+                    
 			
 		   if(currentLoopMap.find(loopLine) == currentLoopMap.end())
 		   {
@@ -1268,29 +1267,35 @@ void print_loop_timer(enum sched_type schedule, int tid_for_timer) //modified to
             DLS[63] = "AWF";
   
 
-	    std::chrono::high_resolution_clock::time_point mytime;
-      mytime = std::chrono::high_resolution_clock::now();
-	    int count = 0;
-      std::chrono::duration<double> time_span = std::chrono::duration_cast<std::chrono::duration<double>>(mytime - timeInit);
-      char* fileData = std::getenv("KMP_TIME_LOOPS");
+        std::chrono::high_resolution_clock::time_point mytime;
+        int count = 0;
+	char* fileData = std::getenv("KMP_TIME_LOOPS");
+	std::fstream ofs;
+      
+	
+	count = std::atomic_fetch_sub(&timeUpdates, 1);
+	mytime = std::chrono::high_resolution_clock::now();
+	
+	std::chrono::duration<double> time_span = std::chrono::duration_cast<std::chrono::duration<double>>(mytime - timeInit);
+        
+	
 
-      if(fileData==NULL || strcmp(fileData,"")==0){
+      if(fileData==NULL || strcmp(fileData,"")==0)
+      {
         std::cout << "Please export KMP_TIME_LOOPS in your environment with the path for the storing the loop times\n";
         exit(-1);
       }
-
-      count = std::atomic_fetch_sub(&timeUpdates, 1);
 	
-      std::fstream ofs;
+      
       ofs.open(fileData, std::ofstream::out | std::ofstream::app);
       ofs << "LoopOccurrence: " << currentLoopMap.at(globalLoopline) << " Location: " << globalLoopline << " #iterations " << globalNIterations << " threadID: " << tid_for_timer << " threadTime: " << time_span.count() << std::endl;
     
-	    
+      
+
       if ( count == 1)
       {
 	  //mytime = std::chrono::high_resolution_clock::now();
   	  timeEnd = mytime;
-  	  std::chrono::duration<double> time_span = std::chrono::duration_cast<std::chrono::duration<double>>(timeEnd - timeInit);
   	  
   	  ofs << "Location: "<< globalLoopline << " #iterations "<< globalNIterations << " LoopTime: " << time_span.count() << " Schedule: " << DLS[schedule] << " Chunk: " << global_chunk << std::endl; //modified to print the current schedule and chunk size 
 
