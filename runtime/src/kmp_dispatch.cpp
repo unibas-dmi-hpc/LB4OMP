@@ -185,6 +185,7 @@ double t2;
 double t3;
 
 std::unordered_map<std::string, std::atomic<int> > currentLoopMap; // keep a record of the time-step/loop execution instance 
+std::mutex fileMutex; //regulate the write to the loop times files
 
 void init_chunk_sizes(int iterations)
 {
@@ -1286,7 +1287,7 @@ void print_loop_timer(enum sched_type schedule, int tid_for_timer) //modified to
         exit(-1);
       }
 	
-      
+      fileMutex.lock(); 
       ofs.open(fileData, std::ofstream::out | std::ofstream::app);
       ofs << "LoopOccurrence: " << currentLoopMap.at(globalLoopline) << " Location: " << globalLoopline << " #iterations " << globalNIterations << " threadID: " << tid_for_timer << " threadTime: " << time_span.count() << std::endl;
     
@@ -1315,6 +1316,7 @@ void print_loop_timer(enum sched_type schedule, int tid_for_timer) //modified to
   	        	
       }     
   ofs.close();
+  fileMutex.unlock();
 }
 
 
