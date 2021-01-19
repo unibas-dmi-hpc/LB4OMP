@@ -1273,7 +1273,7 @@ void print_loop_timer(enum sched_type schedule, int tid_for_timer) //modified to
 	char* fileData = std::getenv("KMP_TIME_LOOPS");
 	std::fstream ofs;
       
-	
+        fileMutex.lock();	
 	count = std::atomic_fetch_sub(&timeUpdates, 1);
 	mytime = std::chrono::high_resolution_clock::now();
 	
@@ -1287,7 +1287,7 @@ void print_loop_timer(enum sched_type schedule, int tid_for_timer) //modified to
         exit(-1);
       }
 	
-      fileMutex.lock(); 
+      //fileMutex.lock(); 
       ofs.open(fileData, std::ofstream::out | std::ofstream::app);
       ofs << "LoopOccurrence: " << currentLoopMap.at(globalLoopline) << " Location: " << globalLoopline << " #iterations " << globalNIterations << " threadID: " << tid_for_timer << " threadTime: " << time_span.count() << std::endl;
     
