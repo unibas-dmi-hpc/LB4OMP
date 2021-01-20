@@ -168,7 +168,7 @@ std::unordered_map<std::string, std::atomic<int> > current_index; //current+1 fo
 std::atomic<int> profilingDataReady=0;
 double currentMu;
 std::atomic<int> timeUpdates = 0;
-std:atomic<int> loopEnter = 0;
+std::atomic<int> loopEnter = 0;
 
 std::atomic<int> chunkUpdates = 0;
 //std::list<std::string> calculatedChunks;
