@@ -6388,7 +6388,7 @@ break;
     LOOP_TIME_MEASURE_END
     // AUTO by Ali
     AUTO_eLoopTimer
-
+    AUTO_FLAG = 0; //reset auto flag
   }else{
     STORE_CHUNK_INFO
   }
