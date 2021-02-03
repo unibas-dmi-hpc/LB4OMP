@@ -64,7 +64,7 @@ extern tsc_tick_count __kmp_stats_start_time; //by Ali
 /* ------------------------------------------------------------------------ */
 /* ------------------------------------------------------------------------ */
 #define LOOP_TIME_MEASURE_START if (getenv("KMP_TIME_LOOPS") !=NULL) { init_loop_timer(loc->psource, ub); } 
-#define LOOP_TIME_MEASURE_END if (getenv("KMP_TIME_LOOPS") !=NULL) { print_loop_timer(pr->schedule, (int) tid); } 
+#define LOOP_TIME_MEASURE_END if (getenv("KMP_TIME_LOOPS") !=NULL) { print_loop_timer(pr->schedule, (int) tid, (int) nproc); } 
 
 #define INIT_CHUNK_RECORDING if (getenv("KMP_PRINT_CHUNKS") !=NULL) { init_chunk_sizes((int) tc); }
 #define STORE_CHUNK_INFO if (getenv("KMP_PRINT_CHUNKS") !=NULL) { store_chunk_sizes((int) *p_lb, (int) *p_ub, (int) tid); } 
@@ -168,6 +168,7 @@ std::unordered_map<std::string, std::atomic<int> > current_index; //current+1 fo
 std::atomic<int> profilingDataReady=0;
 double currentMu;
 std::atomic<int> timeUpdates = 0;
+std::atomic<int> loopEnter = 0;
 
 std::atomic<int> chunkUpdates = 0;
 //std::list<std::string> calculatedChunks;
@@ -256,11 +257,12 @@ void read_profiling_data(std::string loopLocation){
 void init_loop_timer(const char* loopLine, long ub){
   // printf("init loop timer\n");
 		int count = 0;
-		count = std::atomic_fetch_add(&timeUpdates, 1);
+		count = std::atomic_fetch_add(&loopEnter, 1);
     // printf("Count init timer: %d\n", count);
 		if (count == 0)
   		{
 		
+		   timeUpdates = 0; //begining a new loop execution instance
 	 	   globalLoopline = loopLine;
                    globalNIterations = ub+1;
 	  		
@@ -1233,7 +1235,7 @@ void end_auto_loop_timer(int nproc, int tid)
 // ------------------------------------------ End of Auto Extension ------------------------------------
 
 
-void print_loop_timer(enum sched_type schedule, int tid_for_timer) //modified to take the schedule and chunk size and tid
+void print_loop_timer(enum sched_type schedule, int tid_for_timer, int nThreads) //modified to take the schedule and chunk size and tid
 {
 
             std::string DLS[70];
@@ -1273,8 +1275,8 @@ void print_loop_timer(enum sched_type schedule, int tid_for_timer) //modified to
 	char* fileData = std::getenv("KMP_TIME_LOOPS");
 	std::fstream ofs;
       
-	
-	count = std::atomic_fetch_sub(&timeUpdates, 1);
+        fileMutex.lock();	
+	count = std::atomic_fetch_add(&timeUpdates, 1);
 	mytime = std::chrono::high_resolution_clock::now();
 	
 	std::chrono::duration<double> time_span = std::chrono::duration_cast<std::chrono::duration<double>>(mytime - timeInit);
@@ -1287,16 +1289,17 @@ void print_loop_timer(enum sched_type schedule, int tid_for_timer) //modified to
         exit(-1);
       }
 	
-      fileMutex.lock(); 
+      //fileMutex.lock(); 
       ofs.open(fileData, std::ofstream::out | std::ofstream::app);
       ofs << "LoopOccurrence: " << currentLoopMap.at(globalLoopline) << " Location: " << globalLoopline << " #iterations " << globalNIterations << " threadID: " << tid_for_timer << " threadTime: " << time_span.count() << std::endl;
     
       
 
-      if ( count == 1)
+      if (count == (nThreads-1))
       {
 	  //mytime = std::chrono::high_resolution_clock::now();
   	  timeEnd = mytime;
+	  loopEnter = 0; // end loop execution instance
   	  
   	  ofs << "Location: "<< globalLoopline << " #iterations "<< globalNIterations << " LoopTime: " << time_span.count() << " Schedule: " << DLS[schedule] << " Chunk: " << global_chunk << std::endl; //modified to print the current schedule and chunk size 
 
