@@ -43,7 +43,7 @@ LB4OMP
 | ``Adaptive factoring (AF)``  
 ``Improved implementation of Adaptive factoring (mAF)``
 
-**LB4OMP contains the following tool:**
+**LB4OMP contains the following features for performance measurement:**
 
 | ``profiling``  
 The ``profiling`` tool works similar to ``dynamic,1``, yet with timers that capture the average iteration execution time and its standard deviation for the target loops. The collected information is stored in a file, which is read later by the ``FSC``, ``FAC``, ``TAP``, and ``BOLD`` during execution. 
