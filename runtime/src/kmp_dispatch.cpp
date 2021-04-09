@@ -353,6 +353,7 @@ void autoExhaustiveSearch(int N, int P)
     autoLoopData.at(autoLoopName).bestChunk = autoLoopData.at(autoLoopName).cChunk;
   }
 
+  //printf("[Auto] search trials %d \n", autoLoopData.at(autoLoopName).searchTrials);
 
   if (searchTrials < autoDLSPortfolio.size())
   {
@@ -362,7 +363,7 @@ void autoExhaustiveSearch(int N, int P)
     // if current index is higher than the portfolio size
     //currentPortfolioIndex = currentPortfolioIndex < autoDLSPortfolio.size()? currentPortfolioIndex: 0.0;
     currentPortfolioIndex = currentPortfolioIndex % autoDLSPortfolio.size();
-
+   
     autoLoopData.at(autoLoopName).cDLS = currentPortfolioIndex; // select next DLS technique
     autoLoopData.at(autoLoopName).searchTrials++; //increment search trials
 
@@ -1185,7 +1186,7 @@ void end_auto_loop_timer(int nproc, int tid)
             std::atomic_fetch_add(&autoMeanThreadTime, (int) time[tid]); //accumulate thread finishing times in ms
            
             localNProc = std::atomic_fetch_add(&autoThreadCount, 1); //number of accummulations, should be equal to nproc
- 
+            //printf("localNProc: %d, tid: %d \n", localNProc, tid); 
             //std::cout << "time[" << tid << "]: " << time[tid] << "\n";
             //printf("time[%d]: %lf \n", tid, time[tid]);
             //std::cout << "tid " << tid << "autoMeanThreadTime: "  << autoMeanThreadTime << "\n";
@@ -1213,6 +1214,7 @@ void end_auto_loop_timer(int nproc, int tid)
 
                 autoEnter = 0; //reset flag
                 autoWait  = 1; //reset flag
+                AUTO_FLAG = 0; //reset auto flag
 
                 //update loop information
                 autoLoopData.at(autoLoopName).cTime = autoTimerEnd; // update execution time
@@ -1636,7 +1638,7 @@ void __kmp_dispatch_init_algorithm(ident_t *loc, int gtid,
           }
 
           //printf("tc: %d, tid: %d, nproc: %d \n", tc, tid, nproc);
-
+          //printf("tid: %d unlocks other threads \n", tid);
           std::atomic_fetch_sub(&autoWait,1); //allow other threads to continue execution
        }
        else  //others should wait until we update the selected schedule
@@ -6391,7 +6393,7 @@ break;
     LOOP_TIME_MEASURE_END
     // AUTO by Ali
     AUTO_eLoopTimer
-    AUTO_FLAG = 0; //reset auto flag
+   
   }else{
     STORE_CHUNK_INFO
   }
