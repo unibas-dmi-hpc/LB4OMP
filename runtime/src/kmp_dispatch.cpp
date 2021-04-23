@@ -82,24 +82,24 @@ std::unordered_map<std::string, AWFDataRecord > AWFData; // AWF weights
 
 const char* cLoopName; //current loop name
 
-std::atomic<int> AWFEnter = 0;
-std::atomic<int> AWFWait = 1;
-std::atomic<int> AWFCounter = 0;
+std::atomic<int> AWFEnter(0);
+std::atomic<int> AWFWait(1);
+std::atomic<int> AWFCounter(0);
 // ...........................................................................................................
 
 std::unordered_map<std::string, std::atomic<int> > current_index; //current+1 for mean
-std::atomic<int> profilingDataReady=0;
+std::atomic<int> profilingDataReady(0);
 double currentMu;
-std::atomic<int> timeUpdates = 0;
-std::atomic<int> chunkUpdates = 0;
+std::atomic<int> timeUpdates(0);
+std::atomic<int> chunkUpdates(0);
 //std::list<std::string> calculatedChunks;
 int * chunkSizeInfo;
-std::atomic<int> currentChunkIndex=-1;
+std::atomic<int> currentChunkIndex(-1);
 
 std::string globalLoopline;
 long globalNIterations;
 
-std::atomic<int> chunkStart = 0;
+std::atomic<int> chunkStart(0);
 
 
 double t1;
