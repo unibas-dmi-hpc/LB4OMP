@@ -23,6 +23,7 @@
 
 using namespace std;
 
+/* moved to kmp_stats_timing.h ...needs this definition there to enable using the timing without haveing to enable stats// by Ali
 #if KMP_HAVE_TICK_TIME
 #if KMP_MIC
 double tsc_tick_count::tick_time() {
@@ -81,6 +82,7 @@ double tsc_tick_count::tick_time() {
 }
 #endif
 #endif
+*/
 
 static bool useSI = true;
 
