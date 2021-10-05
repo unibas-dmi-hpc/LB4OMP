@@ -96,6 +96,13 @@ How to Call CMake Initially, then Repeatedly
   can be specified on the command line multiple times including all definitions
   in the build options section below.
 - Example of configuring, building, reconfiguring, rebuilding:
+  
+  .. code-block:: console
+  
+    $ mkdir build
+    $ cd build
+    $ cmake -DCMAKE_C_COMPILER=icc -DCMAKE_CXX_COMPILER=icpc -DLIBOMP_HAVE___RDTSC=ON -DLIBOMP_HAVE_X86INTRIN_H=ON ..
+    $ make
 
   .. code-block:: console
 
