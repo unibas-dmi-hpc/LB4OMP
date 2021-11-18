@@ -63,11 +63,11 @@ std::deque<std::shared_timed_mutex> mutexes;
 extern tsc_tick_count __kmp_stats_start_time; //by Ali
 /* ------------------------------------------------------------------------ */
 /* ------------------------------------------------------------------------ */
-#define LOOP_TIME_MEASURE_START if (getenv("KMP_TIME_LOOPS") !=NULL) { init_loop_timer(loc->psource, ub); } 
-#define LOOP_TIME_MEASURE_END if (getenv("KMP_TIME_LOOPS") !=NULL) { print_loop_timer(pr->schedule, (int) tid, (int) nproc); } 
+#define LOOP_TIME_MEASURE_START if (getenv("KMP_TIME_LOOPS") !=NULL) { init_loop_timer(loc->psource, ub); }
+#define LOOP_TIME_MEASURE_END if (getenv("KMP_TIME_LOOPS") !=NULL) { print_loop_timer(pr->schedule, (int) tid, (int) nproc); }
 
 #define INIT_CHUNK_RECORDING if (getenv("KMP_PRINT_CHUNKS") !=NULL) { init_chunk_sizes((int) tc); }
-#define STORE_CHUNK_INFO if (getenv("KMP_PRINT_CHUNKS") !=NULL) { store_chunk_sizes((int) *p_lb, (int) *p_ub, (int) tid); } 
+#define STORE_CHUNK_INFO if (getenv("KMP_PRINT_CHUNKS") !=NULL) { store_chunk_sizes((int) *p_lb, (int) *p_ub, (int) tid); }
 
 #define AUTO_iLoopTimer if (AUTO_FLAG == 1) { init_auto_loop_timer(nproc, tid);}
 #define AUTO_eLoopTimer if (AUTO_FLAG == 1) { end_auto_loop_timer(nproc, tid);}
@@ -79,19 +79,19 @@ std::chrono::high_resolution_clock::time_point timeEnd;
 
 volatile int AUTO_FLAG = 0;
 volatile double autoTimerInit;
-volatile double autoTimerEnd;  
-double autoLBPercentIm; 
-std::atomic<int> autoMeanThreadTime = -1; 
-std::atomic<int> autoTimerFirstEntry = 0; 
-std::atomic<int> autoThreadCount = 0;  
+volatile double autoTimerEnd;
+double autoLBPercentIm;
+std::atomic<int> autoMeanThreadTime(-1);
+std::atomic<int> autoTimerFirstEntry(0);
+std::atomic<int> autoThreadCount(0);
 int global_chunk;
- 
-std::atomic<int> autoEnter = 0;
-std::atomic<int> autoWait = 1;
+
+std::atomic<int> autoEnter(0);
+std::atomic<int> autoWait(1);
 
 const char* autoLoopName;
 
-typedef struct 
+typedef struct
 {
 int autoSearch;
 int cDLS; // current DLS
@@ -112,39 +112,39 @@ std::unordered_map<std::string, LoopData > autoLoopData; //holds loop data
 // LB4OMP extended DLS portfolio ...scheduling techniques are ordered according to their overhead/scheduling/load balancing capacity
 std::vector<sched_type> autoDLSPortfolio{
   kmp_sch_static_chunked, // STATIC    ... 0
-  kmp_sch_dynamic_chunked,       //     ... 1 
+  kmp_sch_dynamic_chunked,       //     ... 1
   kmp_sch_trapezoidal, // TSS          ... 2
   kmp_sch_guided_analytical_chunked,// ... 3 LLVM RTL original auto, which is guided with minimum chunk size
   kmp_sch_guided_iterative_chunked, //  ... 4 GSS
   //--------------LB4OMP_extensions----------
   //kmp_sch_fsc,  // requires profiling
-  //kmp_sch_tap,  // requires profiling 
+  //kmp_sch_tap,  // requires profiling
   //kmp_sch_fac,  // requires profiling
   //kmp_sch_faca, // requires profiling
   kmp_sch_fac2a,                      //  ... 5
- // kmp_sch_fac2,                      // fac2a is more optimized implementation 
+ // kmp_sch_fac2,                      // fac2a is more optimized implementation
   kmp_sch_static_steal,             // ... 6 static_steal
-  //kmp_sch_wf,                         //  not needed on homogeneous cores 
+  //kmp_sch_wf,                         //  not needed on homogeneous cores
   //kmp_sch_bold,  // requires profiling
   kmp_sch_awf_b,                      //  ... 7
   kmp_sch_awf_c,                     //   ... 8
   kmp_sch_awf_d,                    //   ... 9
   kmp_sch_awf_e,                   //    ... 10
   kmp_sch_af_a,                   //     ... 11
-  //kmp_sch_af,                    //      af_a is more optimized implementation 
-  }; 
+  //kmp_sch_af,                    //      af_a is more optimized implementation
+  };
 
 enum DLSPortfolio {STATIC, SS, TSS, GSS_LLVM, GSS, mFAC2, static_steal, AWFB, AWFC, AWFD, AWFE, mAF};
 
 
-// ------------------------------------------ end Auto extension variables -------------------- 
+// ------------------------------------------ end Auto extension variables --------------------
 
 
 std::unordered_map<std::string, std::vector<double> > means_sigmas;
 
 
 // ------------------------------------- AWF data -----------------------------------------------------
-typedef struct 
+typedef struct
 {
 int timeStep;
 std::vector<double> workPerStep;
@@ -159,33 +159,33 @@ std::unordered_map<std::string, AWFDataRecord > AWFData; // AWF weights
 
 const char* cLoopName; //current loop name
 
-std::atomic<int> AWFEnter = 0;
-std::atomic<int> AWFWait = 1;
-std::atomic<int> AWFCounter = 0;
+std::atomic<int> AWFEnter(0);
+std::atomic<int> AWFWait(1);
+std::atomic<int> AWFCounter(0);
 // ...........................................................................................................
 
 std::unordered_map<std::string, std::atomic<int> > current_index; //current+1 for mean
-std::atomic<int> profilingDataReady=0;
+std::atomic<int> profilingDataReady(0);
 double currentMu;
-std::atomic<int> timeUpdates = 0;
-std::atomic<int> loopEnter = 0;
+std::atomic<int> timeUpdates(0);
+std::atomic<int> loopEnter(0);
 
-std::atomic<int> chunkUpdates = 0;
+std::atomic<int> chunkUpdates(0);
 //std::list<std::string> calculatedChunks;
 int * chunkSizeInfo;
-std::atomic<int> currentChunkIndex=-1;
+std::atomic<int> currentChunkIndex(-1);
 
 std::string globalLoopline;
 long globalNIterations;
 
-std::atomic<int> chunkStart = 0;
+std::atomic<int> chunkStart(0);
 
 
 double t1;
 double t2;
 double t3;
 
-std::unordered_map<std::string, std::atomic<int> > currentLoopMap; // keep a record of the time-step/loop execution instance 
+std::unordered_map<std::string, std::atomic<int> > currentLoopMap; // keep a record of the time-step/loop execution instance
 std::mutex fileMutex; //regulate the write to the loop times files
 
 void init_chunk_sizes(int iterations)
@@ -208,7 +208,7 @@ void init_chunk_sizes(int iterations)
     }
   }
 	 // printf("Count %d, %d\n", count, currentChunkIndex);
-  
+
 }
 void store_chunk_sizes(int p_lb, int p_ub, int tid){
 	//return;
@@ -261,14 +261,14 @@ void init_loop_timer(const char* loopLine, long ub){
     // printf("Count init timer: %d\n", count);
 		if (count == 0)
   		{
-		
+
 		   timeUpdates = 0; //begining a new loop execution instance
 	 	   globalLoopline = loopLine;
                    globalNIterations = ub+1;
-	  		
+
 	           timeInit = std::chrono::high_resolution_clock::now();
-                    
-			
+
+
 		   if(currentLoopMap.find(loopLine) == currentLoopMap.end())
 		   {
           		currentLoopMap.insert( std::pair<std::string,int>(loopLine, 1));
@@ -277,7 +277,7 @@ void init_loop_timer(const char* loopLine, long ub){
 		   {
           		currentLoopMap.at(loopLine)++;
 		   }
- 
+
 	  	}
 }
 
@@ -338,14 +338,14 @@ void autoExhaustiveSearch(int N, int P)
    int currentPortfolioIndex =  autoLoopData.at(autoLoopName).cDLS;
    unsigned int searchTrials =  autoLoopData.at(autoLoopName).searchTrials;
 
- 
+
   // Record the best DLS technique found so far ...
   //if current time < min time OR min time == -1 i.e. no identified min yet
   if((autoLoopData.at(autoLoopName).cTime < autoLoopData.at(autoLoopName).bestTime) || (autoLoopData.at(autoLoopName).bestTime == -1.0))
   {
     //best DLS = current DLS
     autoLoopData.at(autoLoopName).bestDLS = currentPortfolioIndex;
-    //best time = current time 
+    //best time = current time
     autoLoopData.at(autoLoopName).bestTime = autoLoopData.at(autoLoopName).cTime;
     //best LB = current LB
     autoLoopData.at(autoLoopName).bestLB = autoLoopData.at(autoLoopName).cLB;
@@ -358,12 +358,12 @@ void autoExhaustiveSearch(int N, int P)
   if (searchTrials < autoDLSPortfolio.size())
   {
 
-     
+
      currentPortfolioIndex++; //increment index
     // if current index is higher than the portfolio size
     //currentPortfolioIndex = currentPortfolioIndex < autoDLSPortfolio.size()? currentPortfolioIndex: 0.0;
     currentPortfolioIndex = currentPortfolioIndex % autoDLSPortfolio.size();
-   
+
     autoLoopData.at(autoLoopName).cDLS = currentPortfolioIndex; // select next DLS technique
     autoLoopData.at(autoLoopName).searchTrials++; //increment search trials
 
@@ -387,10 +387,10 @@ void autoExhaustiveSearch(int N, int P)
 
 }
 
-/*Search the most suitable DLS technique ...taking into account the DLS technqiues order according to their scheduling 
+/*Search the most suitable DLS technique ...taking into account the DLS technqiues order according to their scheduling
  * overhead and their load balancing ability ...
  *
- GOAL: achive the best possible LB with minimum overhead  
+ GOAL: achive the best possible LB with minimum overhead
  * DLS techniques order
  * STATIC, SS, TSS, GSS_LLVM, GSS, static_steal, mFAC2, AWFB, AWFC, AWFD, AWFE, mAF*/
 
@@ -403,12 +403,12 @@ void autoBinarySearch(int N, int P)
 
    int step; // how much we move right or left
 
-   step = 2* DLSProtfolioSize/(1<<autoLoopData.at(autoLoopName).searchTrials); // first full jump to far right ...then far jump to far left 
+   step = 2* DLSProtfolioSize/(1<<autoLoopData.at(autoLoopName).searchTrials); // first full jump to far right ...then far jump to far left
 
     #if KMP_DEBUG
          printf("current LB: %lf , previous LB: %lf, step: %d\n", autoLoopData.at(autoLoopName).cLB, autoLoopData.at(autoLoopName).bestLB, step);
     #endif
-  
+
    // if there is no previous LB metric ... previous LB = current LB
    if (autoLoopData.at(autoLoopName).bestLB == -1)
    {
@@ -417,13 +417,13 @@ void autoBinarySearch(int N, int P)
 
    //if step == 0 ...stop
    if(step == 0)
-   {     
+   {
       //reset search trial counter
       autoLoopData.at(autoLoopName).searchTrials = 0;
       // set auto search of this loop to zero ...we already finshed the search
       autoLoopData.at(autoLoopName).autoSearch = 0;
       #if KMP_DEBUG
-         printf("[AUTO] identified best DLS for loop %s to be %d \n", autoLoopName, autoLoopData.at(autoLoopName).cDLS); 
+         printf("[AUTO] identified best DLS for loop %s to be %d \n", autoLoopName, autoLoopData.at(autoLoopName).cDLS);
       #endif
    }
    //if load imbalance increased ... go right, i.e. current LB metric is higher than previous LB metric
@@ -436,7 +436,7 @@ void autoBinarySearch(int N, int P)
       #endif
    }
    //if load imbalance is low  ... go left
-   else 
+   else
    {
      // go left
      autoLoopData.at(autoLoopName).cDLS -= step;
@@ -470,22 +470,22 @@ void autoBinarySearch(int N, int P)
 void autoRandomSearch(int N, int P)
 {
 
-      double currentLoadImbalance =  autoLoopData.at(autoLoopName).cLB/100; 
+      double currentLoadImbalance =  autoLoopData.at(autoLoopName).cLB/100;
       double jumpProbability = currentLoadImbalance*10; //if LB is greater than 10 ... jump anyway
-      
+
       double randomNum;
-   
+
       // if first time to enter this function
       if(autoLoopData.at(autoLoopName).searchTrials == 0)
       {
           srand(currentLoadImbalance);
-          jumpProbability = 2.0; //always jump at the first entry 
+          jumpProbability = 2.0; //always jump at the first entry
       }
 
       // random number between 0 and 1
       randomNum = (double) rand()/ (double) RAND_MAX;
-       
-       #if KMP_DEBUG      
+
+       #if KMP_DEBUG
        printf("jumpProbability %lf, randomNum %lf \n", jumpProbability, randomNum);
        #endif
 
@@ -493,7 +493,7 @@ void autoRandomSearch(int N, int P)
       {
         // save previous data
         autoLoopData.at(autoLoopName).bestLB    = autoLoopData.at(autoLoopName).cLB;
-        autoLoopData.at(autoLoopName).bestDLS   = autoLoopData.at(autoLoopName).cDLS; 
+        autoLoopData.at(autoLoopName).bestDLS   = autoLoopData.at(autoLoopName).cDLS;
         autoLoopData.at(autoLoopName).bestChunk = autoLoopData.at(autoLoopName).cChunk;
 
         // select another DLS randomly
@@ -513,9 +513,9 @@ void autoRandomSearch(int N, int P)
 // Membership functions for ΔLB
 //
 //
-//           _____-3 -1.5____^____1.5 3________     
-//                   \  /  1 |    \  /          
-//                    \/     |     \/          
+//           _____-3 -1.5____^____1.5 3________
+//                   \  /  1 |    \  /
+//                    \/     |     \/
 //                    /\     |     /\
 //                   /  \    |    /  \
 //         Improved /    \ NoChange   \  Degraded
@@ -589,11 +589,11 @@ double DlbISNoChange(double deltaLB)
 // Membership functions for ΔTpar
 //
 //
-//     _____-3       ____^____       3______  
-//           \      /  1 |    \      /     
-//            \    /     |     \    /      
-//             \  /      |      \  /       
-//              \/       |       \/           
+//     _____-3       ____^____       3______
+//           \      /  1 |    \      /
+//            \    /     |     \    /
+//             \  /      |      \  /
+//              \/       |       \/
 //      Improved/\    NoChange   /\   Degraded
 //             /  \      |      /  \
 //            /    \     |     /    \
@@ -663,7 +663,7 @@ double DTparISImproved(double DTpar)
 
 
 // Tpar
-//    
+//
 //    ^____         ________       _____
 // 1  |    \       /        \     /
 //    |     \    /           \   /
@@ -702,7 +702,7 @@ double TparISMedium(double Tpar)
    }
    else if((Tpar >= 0) && (Tpar < 0.1))
    {
-      return 10*Tpar ; 
+      return 10*Tpar ;
    }
    else if ((Tpar >= 0.1) && (Tpar <= 1.0))
    {
@@ -735,7 +735,7 @@ double TparISShort(double Tpar)
 }
 
 // LB
-//    
+//
 //    ^____        _____       _____
 // 1  |    \      /     \     /
 //    |     \    /       \   /
@@ -810,15 +810,15 @@ double LBISLow(double LB)
 /* | Simple|               Moderate                  |   |   Aggressive           | */
 
 // DLS
-//    
+//
 //    ^____       5______6      8________________14
-// 1  |    \      /      \      /                | 
+// 1  |    \      /      \      /                |
 //    |     \    /        \    /                 |
 //    |      \  /          \  /                  |
 //    |       \/            \/                   |
 //    | Simple/\   Moderate /\  Aggressive       |
 //    |      /  \          /  \                  |
-//    |     /    \        /    \                 | 
+//    |     /    \        /    \                 |
 //  0 |-------------------------------------------->
 //    0    2     3       6     7                 14
 
@@ -849,13 +849,13 @@ void autoFuzzySearch(int N, int P)
 
 /* Step 1  ..... Fuzzification .... */
 
-// We have two inputs ...1) Tpar and 2) LB metric 
+// We have two inputs ...1) Tpar and 2) LB metric
 // But we can measure also the change in these two inputs, i.e. ΔTpar and ΔLB
-// Therefore we need four membership functions, for 
+// Therefore we need four membership functions, for
 // 1. Tpar   ... Short | Medium | Long
 // 2. LB     ... Low | Moderate | High
 // 3. ΔTpar  ... Improved | NoChange | Degraded
-// 4. ΔLB    ... Improved | NoChange | Degraded 
+// 4. ΔLB    ... Improved | NoChange | Degraded
 
 
 //Output
@@ -895,7 +895,7 @@ int selectedDLS;
 
 
 
-// Step 2 ... Rules 
+// Step 2 ... Rules
 
 // .................... rules in the begining ...i.e. previous DLS and LB are -1
 if((autoLoopData.at(autoLoopName).bestLB == -1 ) && (autoLoopData.at(autoLoopName).bestTime == -1) )
@@ -909,29 +909,29 @@ if((autoLoopData.at(autoLoopName).bestLB == -1 ) && (autoLoopData.at(autoLoopNam
     DLSISModerate = MAX(MIN(TparISMedium(Tpar),LBISHigh(LB)),MIN(TparISMedium(Tpar),LBISModerate(LB)));
     DLSISModerate = MAX(DLSISModerate, MIN(TparISLong(Tpar),LBISModerate(LB)));
 
-    
+
     // If TparISLong  and LBISHigh then use aggressive DLS
     DLSISAggressive = MIN(LBISHigh(LB), TparISLong(Tpar));
 }
 else // ..........rules how to change current DLS smartly ...based on ΔDLS and ΔLB
-{ 
+{
 
 // If LBISLow then DLSISSame
 // If DTparISImproved Then DLSISSame
 // If DTparISNoChange and DlbISNoChange then DLSISSame
 //
-   
+
       DLSISSame = MIN(DTparISNoChange(DTpar),DlbISNoChange(Dlb));
       DLSISSame = MAX(DLSISSame, LBISLow(LB));
       DLSISSame = MAX(DLSISSame, DTparISImproved(DTpar));
-     
+
 // If DTparISDegraded and DlbISDegraded then use more aggressive DLS
 // If DTparISNoChange and DlbISDegraded then use more aggressive DLS
 // If LBISHigh then DLSISMoreAggressive
       DLSISMoreAggressive = MIN(LBISHigh(LB),  TparISLong(Tpar));
       DLSISMoreAggressive = MAX(DLSISMoreAggressive, MIN(DTparISDegraded(DTpar), DlbISDegraded(Dlb)));
       DLSISMoreAggressive = MAX(DLSISMoreAggressive, MIN(DTparISNoChange(DTpar),DlbISDegraded(Dlb)));
-     
+
 
 // If DTparISDegraded and DlbISImproved then use less aggressive DLS
 // If DTparISDegraded and DlbISNoChange then use less aggressive DLS
@@ -946,7 +946,7 @@ else // ..........rules how to change current DLS smartly ...based on ΔDLS and 
       DLSISLessAggressive = MAX(DLSISLessAggressive, TparISShort(Tpar));
       DLSISLessAggressive = MAX(DLSISLessAggressive, MIN(DTparISDegraded(DTpar), LBISLow(LB)));
       //printf("Tpar: %lf, is short: %lf \n", Tpar, TparISShort(Tpar));
-      
+
       #if KMP_DEBUG
       printf("[ATUO] DLSISSAME: %lf, DLSISMoreAggressive: %lf, DLSISLessAggressive: %lf \n", DLSISSame, DLSISMoreAggressive, DLSISLessAggressive);
       #endif
@@ -965,15 +965,15 @@ if((autoLoopData.at(autoLoopName).bestLB == -1 ) && (autoLoopData.at(autoLoopNam
     /* | Simple  |               Moderate                |   |   Aggressive           | */
 
     // DLS
-    //    
+    //
     //    ^____       2______4      7________________14
-    // 1  |    \      /      \      /                | 
+    // 1  |    \      /      \      /                |
     //    |     \    /        \    /                 |
     //    |      \  /          \  /                  |
     //    |       \/            \/                   |
     //    | Simple/\   Moderate /\  Aggressive       |
     //    |      /  \          /  \                  |
-    //    |     /    \        /    \                 | 
+    //    |     /    \        /    \                 |
     //  0 |-------------------------------------------->
     //    0    0.5     1      4     6                 14
 
@@ -1035,7 +1035,7 @@ else
 //make sure that selected DLS is within limits
 //
 
-int limit = autoDLSPortfolio.size() -1; 
+int limit = autoDLSPortfolio.size() -1;
 if(selectedDLS > limit)
 {
   selectedDLS = limit;
@@ -1057,7 +1057,7 @@ autoLoopData.at(autoLoopName).bestTime    = autoLoopData.at(autoLoopName).cTime;
 
 
 //set new DLS
-autoLoopData.at(autoLoopName).cDLS = selectedDLS;     
+autoLoopData.at(autoLoopName).cDLS = selectedDLS;
 
 }
 
@@ -1069,7 +1069,7 @@ autoLoopData.at(autoLoopName).cDLS = selectedDLS;
 // Identifies the best DLS technique based on loop execution time
 // Considers loop execution time and load imbalance measure by percent imbalance
 // Supports different search/optimization methods
-// 1. Exhaustive search 
+// 1. Exhaustive search
 // 2. Binary search
 // 3. Random
 // 4. Expert (fuzzy logic)
@@ -1078,11 +1078,11 @@ autoLoopData.at(autoLoopName).cDLS = selectedDLS;
 // Original LLVM auto can be used by using auto,5
 //
 //
-// Input 
+// Input
 // N: number of loop iterations
 // P: number of threads
 // option: passed as a chunk size with auto ... option can select the auto search method
-void auto_DLS_Search(int N, int P, int option) 
+void auto_DLS_Search(int N, int P, int option)
 {
    int currentPortfolioIndex =  autoLoopData.at(autoLoopName).cDLS;
    #if KMP_DEBUG
@@ -1119,17 +1119,17 @@ void auto_DLS_Search(int N, int P, int option)
         // set chunk size
         autoSetChunkSize(N, P);
     }
-    else //normal LLVM auto - it will not reach to this part if chunk is higher than 4 
+    else //normal LLVM auto - it will not reach to this part if chunk is higher than 4
     {
        //Error ...it should not reach that part of the code
        std::cout << "[Auto] invalid option ... this part should not be reachable \n";
-        
+
      }
-    
+
 
     currentPortfolioIndex = autoLoopData.at(autoLoopName).cDLS;
 
-   
+
 
 
 }
@@ -1140,21 +1140,21 @@ void init_auto_loop_timer(int nproc, int tid)
 {
 
          int flag = std::atomic_fetch_add(&autoTimerFirstEntry, 1);
- 
+
         //tsc_tick_count tickThreadCount[nproc];
- 
-    
+
+
         //autoThreadTimerInit[tid] =  tickThreadCount[tid].getValue() * tickThreadCount[tid].tick_time()*1000; //time in seconds
 
 		if (flag == 0) //first thread to enter
   		{
- 
+
                     tsc_tick_count tickCount;
-                    autoTimerFirstEntry = 1;  
-                   
-                  
-                    // #iterations "<< (ub+1) 
-	 	    
+                    autoTimerFirstEntry = 1;
+
+
+                    // #iterations "<< (ub+1)
+
 	  	    autoTimerInit =  tickCount.getValue() * tickCount.tick_time()*1000; //time in seconds
                     //printf("tid: %d, init time: %lf \n", tid, autoTimerInit);
 	  	}
@@ -1164,53 +1164,53 @@ void init_auto_loop_timer(int nproc, int tid)
 // function to measure the time after loop execution - AUTO by Ali
 void end_auto_loop_timer(int nproc, int tid)
 {
-      
-           	   
+
+
             int localNProc = 0;
-       
+
             double time[nproc];
-           
-            
+
+
             tsc_tick_count tickCount[nproc];
-      	   
-      
-            
+
+
+
             time[tid] =  tickCount[tid].getValue() * tickCount[tid].tick_time()*1000; // time in ms
-           
-            
+
+
 
             time[tid] -= autoTimerInit;
-            
+
             //std::cout << "tid: " << tid << " time: " << time[tid] << "\n";
 
             std::atomic_fetch_add(&autoMeanThreadTime, (int) time[tid]); //accumulate thread finishing times in ms
-           
+
             localNProc = std::atomic_fetch_add(&autoThreadCount, 1); //number of accummulations, should be equal to nproc
-            //printf("localNProc: %d, tid: %d \n", localNProc, tid); 
+            //printf("localNProc: %d, tid: %d \n", localNProc, tid);
             //std::cout << "time[" << tid << "]: " << time[tid] << "\n";
             //printf("time[%d]: %lf \n", tid, time[tid]);
             //std::cout << "tid " << tid << "autoMeanThreadTime: "  << autoMeanThreadTime << "\n";
-           
-             
+
+
 	    if ( localNProc == nproc - 1) // last thread to leave the loop
 	    {
-               
-                int localmean =  std::atomic_fetch_add(&autoMeanThreadTime, 0); // fetch the latest value 
+
+                int localmean =  std::atomic_fetch_add(&autoMeanThreadTime, 0); // fetch the latest value
                 localNProc = std::atomic_fetch_add(&autoThreadCount, 0); //fetch the latest value
-                
-               
+
+
 		autoTimerEnd = time[tid]; //Last thread to finish, i.e. Loop finishing time in ms
                 // calculate LB by percent imbalance ...max-mean/max * P/P-1 *100%
                 autoMeanThreadTime = localmean/localNProc; //mean thread execution time
 
                 autoLBPercentIm =  (autoTimerEnd - autoMeanThreadTime ) / autoTimerEnd; //first term
 
-                autoLBPercentIm *= (nproc/(nproc-1))*100; // 2nd term 
+                autoLBPercentIm *= (nproc/(nproc-1))*100; // 2nd term
 		//printf(" time: %lf ,  mean: %d, P: %d, LB: %lf \n", autoTimerEnd, autoMeanThreadTime, localNProc, autoLBPercentIm);
-                
+
                 autoThreadCount = 0; // init thread count
                 autoMeanThreadTime = 0; // init mean
-                autoTimerFirstEntry = 0; // reset flag	
+                autoTimerFirstEntry = 0; // reset flag
 
                 autoEnter = 0; //reset flag
                 autoWait  = 1; //reset flag
@@ -1218,7 +1218,7 @@ void end_auto_loop_timer(int nproc, int tid)
 
                 //update loop information
                 autoLoopData.at(autoLoopName).cTime = autoTimerEnd; // update execution time
-                 
+
                 // check if load imbalance is increased from previous time ...also time
                 if (autoLBPercentIm > (autoLoopData.at(autoLoopName).cLB + 10 ) ) // if load imbalance increased with margin
                 {
@@ -1244,66 +1244,66 @@ void print_loop_timer(enum sched_type schedule, int tid_for_timer, int nThreads)
             DLS[33] = "STATIC";
             DLS[34] = "static unspecialized";
             DLS[35] = "SS";
-            DLS[39] = "TSS"; 
+            DLS[39] = "TSS";
             DLS[40] = "static_greedy";
             DLS[41] = "static_balanced";
             DLS[42] = "GSS";
-            DLS[43] = "Auto(LLVM)"; 
+            DLS[43] = "Auto(LLVM)";
             DLS[44] = "Static Steal";
             DLS[45] = "static_balanced_chunked";
             DLS[46] = "kmp_sch_guided_simd";
 
             //--------------LB4OMP_extensions----------------
-            DLS[48] = "FSC" ; 
-            DLS[49] = "TAP"; 
+            DLS[48] = "FSC" ;
+            DLS[49] = "TAP";
             DLS[50] = "FAC";
-            DLS[51] = "mFAC"; 
+            DLS[51] = "mFAC";
             DLS[52] = "FAC2";
             DLS[53] = "mFac2";
-            DLS[54] = "WF"; 
-            DLS[55] = "BOLD"; 
+            DLS[54] = "WF";
+            DLS[55] = "BOLD";
             DLS[56] = "AWF-B";
             DLS[57] = "AWF-C";
             DLS[58] = "AWF-D";
-            DLS[59] = "AWF-E"; 
-            DLS[60] = "AF"; 
+            DLS[59] = "AWF-E";
+            DLS[60] = "AF";
             DLS[61] = "mAF";
             DLS[62] = "Profiling";
             DLS[63] = "AWF";
-  
+
 
         std::chrono::high_resolution_clock::time_point mytime;
         int count = 0;
 	char* fileData = std::getenv("KMP_TIME_LOOPS");
 	std::fstream ofs;
-      
-        fileMutex.lock();	
+
+        fileMutex.lock();
 	count = std::atomic_fetch_add(&timeUpdates, 1);
 	mytime = std::chrono::high_resolution_clock::now();
-	
+
 	std::chrono::duration<double> time_span = std::chrono::duration_cast<std::chrono::duration<double>>(mytime - timeInit);
-        
-	
+
+
 
       if(fileData==NULL || strcmp(fileData,"")==0)
       {
         std::cout << "Please export KMP_TIME_LOOPS in your environment with the path for the storing the loop times\n";
         exit(-1);
       }
-	
-      //fileMutex.lock(); 
+
+      //fileMutex.lock();
       ofs.open(fileData, std::ofstream::out | std::ofstream::app);
       ofs << "LoopOccurrence: " << currentLoopMap.at(globalLoopline) << " Location: " << globalLoopline << " #iterations " << globalNIterations << " threadID: " << tid_for_timer << " threadTime: " << time_span.count() << std::endl;
-    
-      
+
+
 
       if (count == (nThreads-1))
       {
 	  //mytime = std::chrono::high_resolution_clock::now();
   	  timeEnd = mytime;
 	  loopEnter = 0; // end loop execution instance
-  	  
-  	  ofs << "Location: "<< globalLoopline << " #iterations "<< globalNIterations << " LoopTime: " << time_span.count() << " Schedule: " << DLS[schedule] << " Chunk: " << global_chunk << std::endl; //modified to print the current schedule and chunk size 
+
+  	  ofs << "Location: "<< globalLoopline << " #iterations "<< globalNIterations << " LoopTime: " << time_span.count() << " Schedule: " << DLS[schedule] << " Chunk: " << global_chunk << std::endl; //modified to print the current schedule and chunk size
 
   	  if(currentChunkIndex != -1 && chunkSizeInfo != NULL)
 	  {
@@ -1316,10 +1316,10 @@ void print_loop_timer(enum sched_type schedule, int tid_for_timer, int nThreads)
                 chunkUpdates = 0;
                 chunkStart = 0;
         	free(chunkSizeInfo);
-  	        	
+
   	   }
-  	        	
-      }     
+
+      }
   ofs.close();
   fileMutex.unlock();
 }
@@ -1382,11 +1382,11 @@ void __kmp_dispatch_init_algorithm(ident_t *loc, int gtid,
 
   int active;
   T tc;
-  
+
   kmp_info_t *th;
   kmp_team_t *team;
 
-  
+
 
   LOOP_TIME_MEASURE_START
 
@@ -1487,15 +1487,15 @@ void __kmp_dispatch_init_algorithm(ident_t *loc, int gtid,
         chunk = KMP_DEFAULT_CHUNK;
       }
     }
-  
+
     //------------------------LB4OMP_extensions------------------------
     // initialize the min chunk switcher
     pr->u.p.min_chunk = chunk;
     //------------------------LB4OMP_extensions------------------------
-    
+
 
     if (schedule == kmp_sch_auto) {
-       
+
        if ((chunk >= 2) && (chunk <= 5)) //AUTO by Ali
        {
           AUTO_FLAG = 1; //Set auto flag
@@ -1504,7 +1504,7 @@ void __kmp_dispatch_init_algorithm(ident_t *loc, int gtid,
        {
             chunk = KMP_DEFAULT_CHUNK; // use default chunk size with LLVM auto
        }
-         
+
       // mapping and differentiation: in the __kmp_do_serial_initialize()
       schedule = __kmp_auto;
       //std::cout << "KMP_HAVE___RDTSC: " << KMP_HAVE___RDTSC << std::endl; // by Ali
@@ -1521,7 +1521,7 @@ void __kmp_dispatch_init_algorithm(ident_t *loc, int gtid,
       }
 #endif
     }
-    
+
 
     /* guided analytical not safe for too many threads */
     if (schedule == kmp_sch_guided_analytical_chunked && nproc > 1 << 20) {
@@ -1614,7 +1614,7 @@ void __kmp_dispatch_init_algorithm(ident_t *loc, int gtid,
          if (autoLoopData.find(autoLoopName) == autoLoopData.end()) //if no data about this loop
          {
             //set a new loop record and set autoSearch to 1
-            LoopData data = 
+            LoopData data =
             {
                 1,  //autoSearch;
                -1,  // current DLS index or last tried
@@ -1626,13 +1626,13 @@ void __kmp_dispatch_init_algorithm(ident_t *loc, int gtid,
              -1.0,  // loop time of the best DLS
              -1.0,  // load imbalance of the current DLS
              -1.0   // load imbalance of the best DLS
-            }; 
+            };
 
              //create a new record
              autoLoopData.insert(std::pair<std::string,LoopData>(loc->psource, data));
           }
-          if(autoLoopData.at(autoLoopName).autoSearch == 1) //if autoSearch == 1 
-          { 
+          if(autoLoopData.at(autoLoopName).autoSearch == 1) //if autoSearch == 1
+          {
              //printf("chunk size %d \n", chunk);
              auto_DLS_Search(tc, nproc, chunk);
           }
@@ -1657,7 +1657,7 @@ void __kmp_dispatch_init_algorithm(ident_t *loc, int gtid,
           pr->u.p.min_chunk = chunk;
           pr->u.p.parm1 = chunk;
       }
-      
+
 
     } //end auto flag
 
@@ -1677,14 +1677,14 @@ if (goldenChunk) // if it is set
 
   // update global_chunk value for printing
   global_chunk = chunk;
-  
+
 
 
 
   INIT_CHUNK_RECORDING
-    	
-  	
-    
+
+
+
   pr->u.p.lb = lb;
   pr->u.p.ub = ub;
   pr->u.p.st = st;
@@ -2073,7 +2073,7 @@ if (goldenChunk) // if it is set
 	current_index.at(loc->psource)++;
 	// if(tid==0)
 	// {
-	
+
 	//std::cout << "SIGMA-VALUE: " << sigma << std::endl;
 	// printf("SIGMA-VALUE %lf  nproc %d tid %d \n", sigma, (int)nproc, tid) ;
 	// }
@@ -2086,7 +2086,7 @@ if (goldenChunk) // if it is set
     T P = nproc;
     T N = tc;
     // DBL sigma = __kmp_env_sigma;
-    
+
     T h = __kmp_env_overhead;
 
     double u = sqrt(2.0) * N * h;
@@ -2116,7 +2116,7 @@ if (goldenChunk) // if it is set
 	current_index.at(loc->psource)++;
 	// if(tid==0)
 	// {
-	
+
 	// // std::cout << "SIGMA-VALUE: " << sigma << std::endl;
 	// printf("MU-VALUE %d nproc %d tid %d \n", mu, (int)nproc, tid) ;
 	// }
@@ -2128,7 +2128,7 @@ if (goldenChunk) // if it is set
     // DBL sigma = std::stod(getenv("KMP_SIGMA"));
     // std::cout << std::endl << "SIGMA-VALUE: " << sigma << std::endl;
     // T mu = __kmp_env_mu;
-    // T mu = std::stoi(getenv("KMP_MU")); 
+    // T mu = std::stoi(getenv("KMP_MU"));
     // std::cout << std::endl << "MU-VALUE: " << mu << std::endl;
 
     double alpha = __kmp_env_alpha;
@@ -2169,7 +2169,7 @@ if (goldenChunk) // if it is set
     // DBL sigma = std::stod(getenv("KMP_SIGMA"));
       // std::cout << std::endl << "SIGMA-VALUE: " << sigma << std::endl;
     // T mu = __kmp_env_mu;
-    // T mu = std::stoi(getenv("KMP_MU")); 
+    // T mu = std::stoi(getenv("KMP_MU"));
       // std::cout << std::endl << "MU-VALUE: " << mu << std::endl;
 
 
@@ -2227,7 +2227,7 @@ if (goldenChunk) // if it is set
     // DBL sigma = std::stod(getenv("KMP_SIGMA"));
      // std::cout << std::endl << "SIGMA-VALUE: " << sigma << std::endl;
     // T mu = __kmp_env_mu;
-    // T mu = std::stoi(getenv("KMP_MU")); 
+    // T mu = std::stoi(getenv("KMP_MU"));
      // std::cout << std::endl << "MU-VALUE: " << mu << std::endl;
 
     dbl_parm1 = ((double)P * sigma) / (2.0 * mu);
@@ -2393,7 +2393,7 @@ break;
 case kmp_sch_tfss:{
 	/* trapezoid factoring self-scheduling*/
 	KD_TRACE(100, ("__kmp_dispatch_init_algorithm: T#%d kmp_sch_tfss case\n", gtid));
-	double tss_chunk = ceil((double) tc / ((double) 2*nproc)); 
+	double tss_chunk = ceil((double) tc / ((double) 2*nproc));
         double steps  = ceil(2.0*tc/(tss_chunk+1)); //n=2N/f+l
         double tss_delta = (double) (tss_chunk - 1)/(double) (steps-1);
 	pr->u.p.parm1 = tss_chunk;
@@ -2402,7 +2402,7 @@ case kmp_sch_tfss:{
                 chunk=1;
 	pr->u.p.parm3 = chunk;
 	pr->u.p.parm4 = (ceil(2.0*tc/(tss_chunk+1)))-1;
-	
+
 }
 break;
   case kmp_sch_pls: {
@@ -2427,7 +2427,7 @@ break;
     /* Adaptive Weighted Factoring same as WF but adaptive for time-stepping applications */
     //set the loop name
     cLoopName = loc->psource;
-   
+
     T parm1; // current chunk size
     T parm2 = 0; // current batch index
     DBL dbl_parm1; // factor to be multiplied by chunk
@@ -2455,26 +2455,26 @@ break;
             if (__kmp_env_weights.size() == nproc)
             { w =  __kmp_env_weights;}
             else
-            { 
+            {
                std::vector<double> defaultweights(nproc, 1.0);
                w = defaultweights;
             }
 
-            //set a new loop record 
-            AWFDataRecord data = 
+            //set a new loop record
+            AWFDataRecord data =
             {
                 0, //timeStep
                wS, //workPerStep
               sWS, //sumWorkPerStep
                eT, //executionTimes
               sET, //sumExecutionTimes
-                w //weights   
+                w //weights
             };
             //printf("tid: %d created record for loop %s \n", tid, cLoopName);
             //create a new record
             AWFData.insert(std::pair<std::string,AWFDataRecord>(cLoopName, data));
          }
-        
+
          //increment time-step
          AWFData.at(cLoopName).timeStep++;
 
@@ -2487,16 +2487,16 @@ break;
           ;
 
           //printf("tid: %d ...waited \n", tid);
-       
-     }    
+
+     }
 
 
     // Read thread weight
     dbl_parm2 = AWFData.at(cLoopName).weights[tid];
- 
+
     //record the starting time for each thread
     AWFData.at(cLoopName).executionTimes[tid] = __kmp_get_ticks2();
- 
+
 
     parm1 = ceil(dbl_parm1 * N / (double)P); // initial chunk size
 
@@ -2514,7 +2514,7 @@ break;
   case kmp_sch_bold: {
     if (tid == 0 && means_sigmas.find(loc->psource)==means_sigmas.end()){
 		read_profiling_data(loc->psource);
-		
+
 	}
 
 	while(profilingDataReady != 1){
@@ -2545,7 +2545,7 @@ break;
     // DBL sigma = std::stod(getenv("KMP_SIGMA"));
      // std::cout << std::endl << "SIGMA-VALUE: " << sigma << std::endl;
     // T mu = __kmp_env_mu;
-    // T mu = std::stoi(getenv("KMP_MU")); 
+    // T mu = std::stoi(getenv("KMP_MU"));
      // std::cout << std::endl << "MU-VALUE: " << mu << std::endl;
     T h = __kmp_env_overhead;
 
@@ -2803,7 +2803,7 @@ break;
     pr->u.p.dbl_parm3 = dbl_parm3;
     pr->u.p.dbl_parm4 = dbl_parm4;
 
-    
+
     // reset shared variables first time
     std::lock_guard<std::mutex> lg(sh->u.s.mtx);
     if (!sh->u.s.initialized) { // I'm the first
@@ -2828,7 +2828,7 @@ break;
     DBL dbl_parm4 = 0; // sum of square of avg iteration times
     DBL dbl_parm5 = 0; // my total (sub-)chunk counter
     DBL dbl_parm6; // number of sub-chunks
-    parm7 = chunk; 
+    parm7 = chunk;
 
     KD_TRACE(100,
              ("__kmp_dispatch_init_algorithm: T#%d kmp_sch_af case\n", gtid));
@@ -2857,7 +2857,7 @@ break;
     pr->u.p.dbl_parm7 = parm7;
     // pr->u.p.dbl_parm7 = min_chunk;
 
-    
+
     // reset shared variables first time
     std::lock_guard<std::mutex> lg(sh->u.s.mtx);
     if (!sh->u.s.initialized) { // I'm the first
@@ -2885,7 +2885,7 @@ break;
     DBL dbl_parm4 = 0; // sum of square of avg iteration times
     DBL dbl_parm5 = 0; // my total (sub-)chunk counter
     DBL dbl_parm6; // number of sub-chunks
-    parm7 = chunk; 
+    parm7 = chunk;
 
 
     KD_TRACE(100,
@@ -2915,7 +2915,7 @@ break;
     pr->u.p.dbl_parm7 = parm7;
 
     // Initialize array for storing the chunk sizes information
-    
+
     std::lock_guard<std::mutex> lg(sh->u.s.mtx);
     if (!sh->u.s.initialized) { // I'm the first
       if ((T)mutexes.size() != P)
@@ -2932,9 +2932,9 @@ break;
   break;
   case kmp_sch_profiling: {
 
-  	
+
     /* This is for profiling only */
-    T parm1 = 1; // chunk size    
+    T parm1 = 1; // chunk size
     parm1  = chunk = 1;
 
 
@@ -2944,7 +2944,7 @@ break;
 
     pr->u.p.parm1 = parm1;
     pr->u.p.l_parm1 = 0;
-    if (tid == 0) 
+    if (tid == 0)
     {
     	char* fileData = std::getenv("KMP_PROFILE_DATA");
     	if(fileData==NULL || strcmp(fileData,"")==0)
@@ -3435,7 +3435,7 @@ int __kmp_dispatch_next_algorithm(
     int gtid, dispatch_private_info_template<T> *pr,
     dispatch_shared_info_template<T> /* LB4OMP_extensions volatile*/ *sh,
     kmp_int32 *p_last, T *p_lb, T *p_ub, typename traits_t<T>::signed_t *p_st,
-    T nproc, T tid) 
+    T nproc, T tid)
 {
   typedef typename traits_t<T>::unsigned_t UT;
   typedef typename traits_t<T>::signed_t ST;
@@ -3769,7 +3769,7 @@ int __kmp_dispatch_next_algorithm(
         pr->u.p.ordered_upper = limit;
       } // if
     } // if
-        
+
 
     break;
   } // case
@@ -3794,7 +3794,7 @@ int __kmp_dispatch_next_algorithm(
     	// }
       pr->u.p.lb = pr->u.p.ub + pr->u.p.st;
     }
-        
+
   } // case
   break;
   case kmp_sch_static_greedy: /* original code for kmp_sch_static_greedy was
@@ -3836,7 +3836,7 @@ int __kmp_dispatch_next_algorithm(
         pr->u.p.ordered_upper = limit;
       } // if
     } // if
-    
+
   } // case
   break;
 
@@ -3880,7 +3880,7 @@ int __kmp_dispatch_next_algorithm(
         pr->u.p.ordered_upper = limit;
       } // if
     } // if
-    
+
   } // case
   break;
 
@@ -3948,7 +3948,7 @@ int __kmp_dispatch_next_algorithm(
       if (p_st != NULL)
         *p_st = 0;
     } // if
-    
+
   } // case
   break;
 
@@ -4023,7 +4023,7 @@ int __kmp_dispatch_next_algorithm(
       if (p_st != NULL)
         *p_st = 0;
     } // if
-    
+
   } // case
   break;
 #endif // OMP_45_ENABLED
@@ -4120,7 +4120,7 @@ int __kmp_dispatch_next_algorithm(
       if (p_st != NULL)
         *p_st = 0;
     }
-    
+
   } // case
   break;
 
@@ -4168,7 +4168,7 @@ int __kmp_dispatch_next_algorithm(
         pr->u.p.ordered_upper = limit;
       } // if
     } // if
-    
+
   } // case
   break;
 /* --------------------------LB4OMP_extensions----------------------------- */
@@ -4191,7 +4191,7 @@ if((int)tid == 0){
    // {
    // 	t1=__kmp_get_ticks2();
    // 	h=(t2-t1)-t3;
-    	    
+
     // }
     t1 = __kmp_get_ticks2();
 
@@ -4239,7 +4239,7 @@ if((int)tid == 0){
         pr->u.p.ordered_upper = limit;
       } // if
     } // if
-    
+
   } // case
   break;
 
@@ -4294,7 +4294,7 @@ if((int)tid == 0){
       if (p_st != nullptr)
         *p_st = 0;
     } // if
-    
+
   } // case
   break;
 
@@ -4366,7 +4366,7 @@ if((int)tid == 0){
       if (p_st != nullptr)
         *p_st = 0;
     } // if
-    
+
   } // case
   break;
 
@@ -4462,7 +4462,7 @@ if((int)tid == 0){
       if (p_st != nullptr)
         *p_st = 0;
     } // if
-    
+
   } // case
   break;
 
@@ -4528,7 +4528,7 @@ if((int)tid == 0){
       if (p_st != nullptr)
         *p_st = 0;
     } // if
-    
+
   } // case
   break;
 
@@ -4607,7 +4607,7 @@ if((int)tid == 0){
       if (p_st != nullptr)
         *p_st = 0;
     } // if
-    
+
   } // case
   break;
 
@@ -4690,7 +4690,7 @@ if((int)tid == 0){
       if (p_st != nullptr)
         *p_st = 0;
     } // if
-    
+
   } // case
   break;
 case kmp_sch_fac2b:{
@@ -4717,7 +4717,7 @@ case kmp_sch_fac2b:{
                 if (p_st != nullptr)
                         *p_st = incr;
 		*p_lb = start + init * incr;
-      		*p_ub = start + limit * incr; 
+      		*p_ub = start + limit * incr;
                 //printf("start %d end %d\n", *p_lb, *p_ub);
                 if (pr->flags.ordered) {
                         pr->u.p.ordered_lower = init;
@@ -4756,7 +4756,7 @@ case kmp_sch_rnd:{
                 if (p_st != nullptr)
                         *p_st = incr;
                 *p_lb = start + init * incr;
-                *p_ub = start + limit * incr; 
+                *p_ub = start + limit * incr;
                 //printf("start %d end %d\n", *p_lb, *p_ub);
                 if (pr->flags.ordered) {
                         pr->u.p.ordered_lower = init;
@@ -4772,8 +4772,8 @@ case kmp_sch_rnd:{
                 if (p_st != nullptr)
                         *p_st = 0;
         }
-	
-	
+
+
 }
 break;
 case kmp_sch_viss:{
@@ -4807,7 +4807,7 @@ case kmp_sch_viss:{
                 if (p_st != nullptr)
                         *p_st = incr;
                 *p_lb = start + init * incr;
-                *p_ub = start + limit * incr;                 
+                *p_ub = start + limit * incr;
 		//printf("start %d end %d\n", *p_lb, *p_ub);
                 if (pr->flags.ordered) {
                         pr->u.p.ordered_lower = init;
@@ -4849,7 +4849,7 @@ case kmp_sch_fiss:{
                 if (p_st != nullptr)
                         *p_st = incr;
                 *p_lb = start + init * incr;
-                *p_ub = start + limit * incr; 
+                *p_ub = start + limit * incr;
 		//printf("start %d end %d\n", *p_lb, *p_ub);
                 if (pr->flags.ordered) {
                         pr->u.p.ordered_lower = init;
@@ -4885,7 +4885,7 @@ case kmp_sch_mfsc:{
                 incr = pr->u.p.st;
                 if (p_st != nullptr)
                         *p_st = incr;
-                
+
 		*p_lb = start + init * incr;
                 *p_ub = start + limit * incr;
 		//printf("start %d end %d\n", *p_lb, *p_ub);
@@ -4903,7 +4903,7 @@ case kmp_sch_mfsc:{
                 if (p_st != nullptr)
                         *p_st = 0;
         }
-	
+
 }
 break;
 case kmp_sch_tfss:{
@@ -4930,7 +4930,7 @@ case kmp_sch_tfss:{
 	temp_chunk=calculated_chunk;
 	accum_chunk=temp_chunk;
 	for(int i=1; i<total_threads;i++)
-        {       
+        {
 
                     accum_chunk+=temp_chunk- tss_delta;
                     temp_chunk-=tss_delta;
@@ -4954,7 +4954,7 @@ case kmp_sch_tfss:{
                 if (p_st != nullptr)
                         *p_st = incr;
                 *p_lb = start + init * incr;
-                *p_ub = start + limit * incr;                 
+                *p_ub = start + limit * incr;
 		//printf("start %d end %d\n", *p_lb, *p_ub);
                 if (pr->flags.ordered) {
                         pr->u.p.ordered_lower = init;
@@ -4969,7 +4969,7 @@ case kmp_sch_tfss:{
                 *p_ub = 0;
                 if (p_st != nullptr)
                         *p_st = 0;
-        } 
+        }
 }
 break;
  case kmp_sch_pls:{
@@ -4996,7 +4996,7 @@ break;
 	if(calculated_chunk < min_chunk)
 		calculated_chunk = min_chunk;
 	//printf("calculated chunk %d minimum %d \n", calculated_chunk, min_chunk);
-	ST start_index =test_then_add<ST>(RCAST(volatile ST *, &sh->u.s.iteration), (ST)calculated_chunk); 
+	ST start_index =test_then_add<ST>(RCAST(volatile ST *, &sh->u.s.iteration), (ST)calculated_chunk);
 	ST end_index = calculated_chunk+start_index-1;
 	if(end_index > total_iterations-1)
 		end_index=total_iterations-1;
@@ -5011,7 +5011,7 @@ break;
       		if (p_st != nullptr)
         		*p_st = incr;
                 *p_lb = start + init * incr;
-                *p_ub = start + limit * incr; 		
+                *p_ub = start + limit * incr;
 		//printf("start %d end %d\n", *p_lb, *p_ub);
       		if (pr->flags.ordered) {
         		pr->u.p.ordered_lower = init;
@@ -5035,7 +5035,7 @@ break;
     T min_chunk = pr->u.p.parm3; // minimum chunk size
     double factor = pr->u.p.dbl_parm1;
     double weight = pr->u.p.dbl_parm2;
-    
+
     KD_TRACE(100, ("__kmp_dispatch_next_algorithm: T#%d kmp_sch_awf case\n",
                    gtid));
     trip = pr->u.p.tc;
@@ -5107,18 +5107,18 @@ break;
     //  printf("thread %d is assignd a negative value \n", tid);
     //}
     //{if (tid == 0)printf("chunksize: %d \n", *p_ub - *p_lb +1);}
- 
+
       if (pr->flags.ordered) {
         pr->u.p.ordered_lower = init;
         pr->u.p.ordered_upper = limit;
       } // if
-    } else 
+    } else
     {
-       
+
        // record thread finishing time
        double temp = __kmp_get_ticks2();
        AWFData.at(cLoopName).executionTimes[tid]  = temp - AWFData.at(cLoopName).executionTimes[tid];
-       //if ( AWFData.at(cLoopName).executionTimes[tid]  < 0) 
+       //if ( AWFData.at(cLoopName).executionTimes[tid]  < 0)
        // printf("thread %d exe time is negative !! \n", tid);
 
 
@@ -5149,8 +5149,8 @@ break;
 
           for(T i=0; i< nproc; i++)
           {
-             awap += (AWFData.at(cLoopName).sumExecutionTimes[i] / AWFData.at(cLoopName).sumWorkPerStep[i] ); 
-          } 
+             awap += (AWFData.at(cLoopName).sumExecutionTimes[i] / AWFData.at(cLoopName).sumWorkPerStep[i] );
+          }
           awap = awap / nproc;
           //printf("tid: %d, awap = %lf \n ",tid,awap);
 
@@ -5165,7 +5165,7 @@ break;
             AWFData.at(cLoopName).weights[i] = awap / AWFData.at(cLoopName).sumExecutionTimes[i] * AWFData.at(cLoopName).sumWorkPerStep[i] * nproc/trw ;
             //printf("%d, %lf \n", i, AWFData.at(cLoopName).weights[i]);
           }
-             
+
           //printf("[AWF] status == 0, step %d,  thread %d, weight %lf, time %lf\n", AWFData.at(cLoopName).timeStep,tid, AWFData.at(cLoopName).weights[tid],  AWFData.at(cLoopName).executionTimes[tid]);
        }
       *p_lb = 0;
@@ -5173,7 +5173,7 @@ break;
       if (p_st != nullptr)
         *p_st = 0;
     } // if
-    
+
   } // case
   break;
 
@@ -5320,7 +5320,7 @@ break;
       if (p_st != nullptr)
         *p_st = 0;
     } // if
-    
+
 #if KMP_DEBUG
     endtime = __kmp_get_ticks2();
     printf("Thread %i: Scheduling took %lf microseconds.\n", (int)tid,
@@ -5478,7 +5478,7 @@ break;
       if (p_st != nullptr)
         *p_st = 0;
     } // if
-    
+
   } // case
   break;
 
@@ -5619,7 +5619,7 @@ break;
       if (p_st != nullptr)
         *p_st = 0;
     } // if
-    
+
   } // case
   break;
 
@@ -5772,7 +5772,7 @@ break;
       if (p_st != nullptr)
         *p_st = 0;
     } // if
-    
+
   } // case
   break;
 
@@ -5894,7 +5894,7 @@ break;
         break;
       } // if
     } // while
- 
+
     if (status != 0) {
 
       start = pr->u.p.lb;
@@ -5903,7 +5903,7 @@ break;
         *p_st = incr;
       *p_lb = start + init * incr;
       *p_ub = start + limit * incr;
-        
+
       if (pr->flags.ordered) {
         pr->u.p.ordered_lower = init;
         pr->u.p.ordered_upper = limit;
@@ -5914,8 +5914,8 @@ break;
       if (p_st != nullptr)
         *p_st = 0;
     } // if
-    
-	
+
+
   } // case
   break;
 
@@ -6042,7 +6042,7 @@ break;
                (int)chunk_size);
 #endif
       }
-       
+
 
       limit = init + cs;
       if (compare_and_swap<ST>(RCAST(volatile ST *, &sh->u.s.iteration),
@@ -6087,8 +6087,8 @@ break;
       if (p_st != nullptr)
         *p_st = 0;
     } // if
-    // printf("CHEGUEIII7%d \n", tid); 
-    // 
+    // printf("CHEGUEIII7%d \n", tid);
+    //
   } // case
   break;
 
@@ -6260,7 +6260,7 @@ break;
       if (p_st != nullptr)
         *p_st = 0;
     } // if
-    
+
   } // case
   break;
 
@@ -6359,7 +6359,7 @@ break;
   } break;
   } // switch
   //printf("status %d tid %d\n", (int)status, tid);
-  
+
   if (p_last)
     *p_last = last;
 #ifdef KMP_DEBUG
@@ -6393,7 +6393,7 @@ break;
     LOOP_TIME_MEASURE_END
     // AUTO by Ali
     AUTO_eLoopTimer
-   
+
   }else{
     STORE_CHUNK_INFO
   }
