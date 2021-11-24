@@ -7,6 +7,10 @@ LB4OMP
    :target: https://doi.org/10.5281/zenodo.3872907
 
 
+**Paper references**
+[J. H. M. Korndörfer, A. Eleliemy, A. Mohammed and F. M. Ciorba, "LB4OMP: A Dynamic Load Balancing Library for Multithreaded Applications," in IEEE Transactions on Parallel and Distributed Systems, vol. 33, no. 4, pp. 830-841, doi: 10.1109/TPDS.2021.3107775.]: https://ieeexplore.ieee.org/document/9524500
+
+
 **LB4OMP contains the following loop scheduling techniques:**
 
 **OpenMP standard**
