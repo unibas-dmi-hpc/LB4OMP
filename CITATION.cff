@@ -29,3 +29,13 @@ authors:
     email: florina.ciroba@unibas.ch
     affiliation: 'University of Basel, Switzerland'
     orcid: 'https://orcid.org/0000-0002-2773-4499'
+keywords:
+  - hierarchical parallelism
+  - dynamic load balancing
+  - self-scheduling
+  - runtime library
+  - OpenMP
+  - multithreaded programming
+  - shared-memory systems
+license: MIT
+repository-code: https://github.com/unibas-dmi-hpc/LB4OMP/
