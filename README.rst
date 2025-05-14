@@ -139,7 +139,7 @@ learning algorithms and other combinations are supported:
 | O | Sets the schedule for loops annotated with the keyword | au    | - |
 | M | “runtime”. While there are many scheduling methods     | to,[6 |   |
 | P | available to choose from, we only list the values      | ..    |   |
-| _ | introduced related to RL methods here.                              | 15]   |   |
+| _ | introduced related to RL methods here.                 | 15]   |   |
 | S |                                                        |       |   |
 | C |                                                        |       |   |
 | H |                                                        |       |   |
