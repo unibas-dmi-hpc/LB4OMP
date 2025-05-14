@@ -79,10 +79,9 @@ LB4OMP implements a profiling tool that collects such information. The profiling
 
 ``KMP_PRINT_CHUNKS`` when this environment variable is set to one, the LB4OMP collects and stores the calculated chunk size for each thread for each scheduling round. This information is stored in the same file as defined by ``KMP_TIME_LOOPS``. This data may be very large depending on the scheduling technique and the size of the OpenMP loop.
 
-
+==================================
 LB4OMP with Reinforcement Learning
 ==================================
-
 This extension provides a reinforcement learning implementation of
 common learning algorithm for RL agents to select a dynamic loop
 scheduling algorithm automatically during runtime. The following
@@ -115,11 +114,8 @@ learning algorithms and other combinations are supported:
 .. figure:: runtime/src/reinforcement-learning/mathod-combinations.drawio.png
    :alt: Possible Mathod Combinations
 
-   Possible Mathod Combinations
-
 Usage
 -----
-
 +---+--------------------------------------------------------+-------+---+
 | E | Description                                            | Pos   | D |
 | n |                                                        | sible | e |
@@ -305,8 +301,6 @@ Usage
 | I |                                                        |       |   |
 | N |                                                        |       |   |
 +---+--------------------------------------------------------+-------+---+
-
-
 
 =========================================================
 How to Build LB4OMP, the extended LLVM* OpenMP* Libraries
