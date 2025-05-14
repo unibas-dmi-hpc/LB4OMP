@@ -44,6 +44,10 @@ include_directories(
   ${CMAKE_CURRENT_BINARY_DIR}
   ${LIBOMP_SRC_DIR}
   ${LIBOMP_SRC_DIR}/i18n
+  # START Reinforcement Learning Extensions
+  #${LIBOMP_SRC_DIR}/reinforcement-learning
+  #${LIBOMP_SRC_DIR}/reinforcement-learning/agents
+  # END Reinforcement Learning Extensions
   ${LIBOMP_INC_DIR}
   ${LIBOMP_SRC_DIR}/thirdparty/ittnotify
 )
@@ -80,6 +84,34 @@ else()
     kmp_barrier.cpp
     kmp_wait_release.cpp
     kmp_affinity.cpp
+    # START Reinforcement Learning Extensions
+    reinforcement-learning/utils/utils.cpp
+    ## Initializers
+    reinforcement-learning/initializers/kmp_zero_init.cpp
+    reinforcement-learning/initializers/kmp_random_init.cpp
+    reinforcement-learning/initializers/kmp_optimistic_init.cpp
+    ## Policies
+    reinforcement-learning/policies/kmp_explore_first_policy.cpp
+    reinforcement-learning/policies/kmp_epsilon_greedy_policy.cpp
+    reinforcement-learning/policies/kmp_softmax_policy.cpp
+    ## Rewards
+    reinforcement-learning/rewards/kmp_looptime_reward.cpp
+    reinforcement-learning/rewards/kmp_loadimbalance_reward.cpp
+    reinforcement-learning/rewards/kmp_robustness_reward.cpp
+    reinforcement-learning/rewards/kmp_looptime_average_reward.cpp
+    reinforcement-learning/rewards/kmp_looptime_rolling_average_reward.cpp
+    reinforcement-learning/rewards/kmp_looptime_inverse_reward.cpp
+    ## Agents
+    reinforcement-learning/agents/kmp_q_learner.cpp
+    reinforcement-learning/agents/kmp_sarsa_learner.cpp
+    reinforcement-learning/agents/kmp_expected_sarsa_learner.cpp
+    reinforcement-learning/agents/kmp_doubleq_learner.cpp
+    reinforcement-learning/agents/kmp_qv_learner.cpp
+    reinforcement-learning/agents/kmp_r_learner.cpp
+    reinforcement-learning/agents/kmp_deepq_learner.cpp
+    ## Main File
+    reinforcement-learning/kmp_agent_provider.cpp
+    # END Reinforcement Learning Extensions
     kmp_dispatch.cpp
     kmp_lock.cpp
     kmp_sched.cpp

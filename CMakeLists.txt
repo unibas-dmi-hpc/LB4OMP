@@ -7,7 +7,7 @@ set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake ${CMAKE_MODULE_PATH})
 # I use C++14 STL for shared mutexes to improve performance.
 # The production version of this library is now allowed to use C++14.
 # To make this LLVM OpenMP library production ready, use an alternative.
-set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD 14) #TODO@kurluc00: Is this OK? We need this for the rlly library, otherwise we could leave it at 14.
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 # --------------ay_extensions------------

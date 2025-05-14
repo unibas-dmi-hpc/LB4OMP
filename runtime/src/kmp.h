@@ -915,7 +915,7 @@ extern int __kmp_hws_abs_flag; // absolute or per-item number requested
 #define KMP_GTID_SHUTDOWN (-3) /* Library is shutting down */
 #define KMP_GTID_MONITOR (-4) /* Monitor thread ID */
 #define KMP_GTID_UNKNOWN (-5) /* Is not known */
-#define KMP_GTID_MIN (-6) /* Minimal gtid for low bound check in DEBUG */
+#define KMP_GTID_MIN (-6) /* Minimal gtid for low bound check in RL_DEBUG */
 
 #if OMP_50_ENABLED
 /* OpenMP 5.0 Memory Management support */

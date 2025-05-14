@@ -11,7 +11,6 @@ LB4OMP
 
 
 - [J. H. M. Korndörfer, A. Eleliemy, A. Mohammed and F. M. Ciorba, LB4OMP: A Dynamic Load Balancing Library for Multithreaded Applications, in IEEE Transactions on Parallel and Distributed Systems, vol. 33, no. 4, pp. 830-841, doi: 10.1109/TPDS.2021.3107775.](https://ieeexplore.ieee.org/document/9524500/)
-- [A. Mohammed, J. H. M. Korndörfer, A. Eleliemy and F. M. Ciorba, "Automated Scheduling Algorithm Selection and Chunk Parameter Calculation in OpenMP," in IEEE Transactions on Parallel and Distributed Systems, vol. 33, no. 12, pp. 4383-4394, 1 Dec. 2022, doi: 10.1109/TPDS.2022.3189270.] (https://ieeexplore.ieee.org/document/9825675/)
 
 
 
