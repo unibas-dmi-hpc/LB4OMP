@@ -115,14 +115,38 @@ learning algorithms and other combinations are supported:
 .. figure:: runtime/src/reinforcement-learning/mathod-combinations.drawio.png
    :alt: Possible Mathod Combinations
 
-+-------------------------+--------------------------------------------------------+---------------------+------------------+
-| Environment Variable    | Description                                            | Possible Values     | Default          |
-+=========================+========================================================+=====================+==================+
-| OMP_SCHEDULE            | Sets the schedule for loops annotated with the keyword | auto, [6..15]       |                  |
-|                         | “runtime”. While there are many scheduling methods     |                     |                  |
-|                         | available to choose from, we only list the values      |                     |                  |
-|                         | introduced related to RL methods here.                 |                     |                  |
-+-------------------------+--------------------------------------------------------+---------------------+------------------+
++---------------------------+--------------------------------------------------------------+----------------------+--------------------+
+| Environment Variable      | Description                                                  | Possible Values      | Default            |
++===========================+==============================================================+======================+====================+
+| OMP_SCHEDULE              | Sets the schedule for loops annotated with the keyword       | auto, [6..15]        | NA                 |
+|                           | “runtime”. Only values related to RL methods are listed.     |                      |                    |
++---------------------------+--------------------------------------------------------------+----------------------+--------------------+
+| KMP_RL_INIT               | Sets the initialization method for the tabular data          | 'zero', 'random',    | 'zero'             |
+|                           | structure of the agent.                                      | 'optimistic'         |                    |
++---------------------------+--------------------------------------------------------------+----------------------+--------------------+
+| KMP_RL_POLICY             | Sets the action selection policy of the agent.               | 'explore_first',     | 'explore_first'    |
+|                           |                                                              | 'epsilon_greedy',    |                    |
+|                           |                                                              | 'softmax'            |                    |
++---------------------------+--------------------------------------------------------------+----------------------+--------------------+
+| KMP_REWARD                | Sets the metric that the agent uses to derive the reward.    | 'looptime',          | 'looptime'         |
+|                           |                                                              | 'load_imbalance',    |                    |
+|                           |                                                              | 'robustness'         |                    |
++---------------------------+--------------------------------------------------------------+----------------------+--------------------+
+| KMP_ALPHA                 | The learning rate α determines how new info overrides old.   | [0 .. 1]             | 0.85               |
++---------------------------+--------------------------------------------------------------+----------------------+--------------------+
+| KMP_ALPHA_DECAY           | Factor by which to decay the learning rate α each timestep.  | [0 .. 1]             | 0.90               |
++---------------------------+--------------------------------------------------------------+----------------------+--------------------+
+| KMP_ALPHA_MIN             | Minimum value for α where the decay stops.                   | [0 .. 1]             | 0.10               |
++---------------------------+--------------------------------------------------------------+----------------------+--------------------+
+| KMP_GAMMA                 | Discount factor γ; importance of future rewards.             | [0 .. 1]             | 0.95               |
++---------------------------+--------------------------------------------------------------+----------------------+--------------------+
+| KMP_EPSILON               | Probability of taking a random action (exploration).         | [0 .. 1]             | 0.9                |
++---------------------------+--------------------------------------------------------------+----------------------+--------------------+
+| KMP_EPSILON_DECAY         | Factor to decay exploration probability after each step.     | [0 .. 1]             | 0.9                |
++---------------------------+--------------------------------------------------------------+----------------------+--------------------+
+| KMP_EPSILON_MIN           | Minimum value for exploration probability (1 - ε).           | [0 .. 1]             | 0.10               |
++---------------------------+--------------------------------------------------------------+----------------------+--------------------+
+
 
 
 
