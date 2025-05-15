@@ -8,7 +8,7 @@ LB4OMP
 
 
 **Paper references**
-
+ 
 
 - [J. H. M. Korndörfer, A. Eleliemy, A. Mohammed and F. M. Ciorba, LB4OMP: A Dynamic Load Balancing Library for Multithreaded Applications, in IEEE Transactions on Parallel and Distributed Systems, vol. 33, no. 4, pp. 830-841, doi: 10.1109/TPDS.2021.3107775.](https://ieeexplore.ieee.org/document/9524500/)
 
